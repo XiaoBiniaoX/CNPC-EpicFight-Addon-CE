@@ -5,6 +5,11 @@
 
 > 原版 CNPC Epic Fight Addon 的社区维护版本。
 
+> This project is a community-maintained fork of the original CNPC Epic Fight Addon. The original project was developed by Goodbird.
+
+> 本项目为 CNPC Epic Fight Addon 的社区维护分支，原项目由 Goodbird 开发。
+
+
 ---
 
 ## ✨ Features | 特性
