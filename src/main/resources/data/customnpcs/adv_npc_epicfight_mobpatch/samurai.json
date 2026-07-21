@@ -1,0 +1,256 @@
+{
+	"model": "epicfight:entity/biped",
+	"armature": "epicfight:entity/biped",
+	"renderer": "zombie",
+	"isHumanoid": true,
+	"faction": "undead",
+	"attributes": {				
+		"impact": 2.0,
+		"armor_negation": 5.0,
+		"max_strikes": 3,
+		"chasing_speed": 1,
+        "scale": 1.0,
+		"max_stamina": 85,
+		"stamina_regan_delay": 60,
+		"has_stun_reduction": true,
+		"max_stun_shield": 5,
+		"stun_shield_regan_multiply": 1.2,
+		"stun_shield_regan_delay": 20,
+		"stamina_lose_multiply": 0.5
+	},
+	"default_livingmotions": {
+		"idle": "epicfight:biped/living/idle",
+		"walk": "epicfight:biped/living/walk",
+		"chase": "epicfight:biped/living/run",
+		"death": "epicfight:biped/living/death"
+	},
+	"humanoid_weapon_motions": [
+		  {
+			"weapon_categories": ["axe", "hoe", "pickaxe", "shovel", "sword"],
+			"style":"common",
+			"livingmotions": {
+				"chase": "epicfight:biped/living/hold_longsword",
+               			 "walk": "epicfight:biped/living/walk"
+			}
+		  },
+              { 
+                  "weapon_categories": ["longsword"],
+                  "style":"common", 
+                  "livingmotions": {
+                        "chase": "epicfight:biped/living/hold_longsword",
+                        "walk": "epicfight:biped/living/hold_longsword"
+                  }
+              }
+	],
+	"custom_guard_motion": [
+            { 
+                "weapon_categories": ["longsword","tachi","sword", "uchigatana"],
+                "style":"common",
+                "guard": "indestructible:guard/guard_longsword",
+		  		"stamina_cost_multiply": 1.5,
+		  		"can_block_projectile" : false
+            }
+	],
+	"stun_animations": {
+		"short": "epicfight:biped/combat/hit_short",
+		"long": "epicfight:biped/combat/hit_long",
+		"knockdown": "epicfight:biped/combat/knockdown",
+		"fall": "epicfight:biped/living/landing",
+		"neutralize": "epicfight:biped/skill/guard_break1"
+	},
+	"combat_behavior": [
+            {
+			"weapon_categories": ["sword","longsword","tachi","uchigatana"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 90,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 20,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}
+							],
+							"guard": 15,
+							"counter": "indestructible:guard/counter",
+							"counter_cost": 3,
+							"counter_chance": 0,
+							"counter_speed": 1
+						}
+                    ]                 
+				},
+				{
+					"weight": 100,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_distance", "min": 0.0, "max": 6.0}
+							],
+							"guard": 3,
+              "counter": "epicfight:biped/skill/guard_sword_hit_active1",
+							"counter_cost": 0,
+							"counter_chance": 1.0,
+							"counter_speed": 1
+						}
+                    ]                 
+				},
+				{
+					"weight": 105,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 40,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 5.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight:biped/combat/mob_uchigatana1",
+							"play_speed": 1.0,
+							"stamina": 5,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1,
+								"impact": 0.5,
+								"armor_negation": 1
+							}
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 5.0}
+							],
+							"animation": "epicfight:biped/combat/mob_uchigatana2",
+							"play_speed": 1.0,
+							"stamina": 0,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1,
+								"impact": 0.5,
+								"armor_negation": 1
+							}
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 5.0}
+							],
+							"animation": "epicfight:biped/combat/mob_uchigatana3",
+							"play_speed": 1.0,
+							"stamina": 3,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1,
+								"impact": 0.5,
+								"armor_negation": 1
+							}	
+						}
+                    ]                 
+				},
+				{
+					"weight": 104,
+					"canBeInterrupted": true,
+					"looping": false,
+					"cooldown": 100,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 7.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight:biped/combat/tachi_dash",
+							"play_speed": 0.8,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1.1,
+								"impact": 1,
+								"armor_negation": 1.5
+							}
+						}
+                    ]                 
+				},
+				{
+					"weight": 105,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 40,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 5.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight:biped/combat/uchigatana_auto1",
+							"play_speed": 0.8,
+							"stamina": 5,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1,
+								"impact": 0.5,
+								"armor_negation": 1
+							}
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 5.0}
+							],
+							"animation": "epicfight:biped/combat/uchigatana_auto2",
+							"play_speed": 0.8,
+							"stamina": 0,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1,
+								"impact": 0.5,
+								"armor_negation": 1
+							}
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 5.0}
+							],
+							"animation": "epicfight:biped/combat/uchigatana_auto3",
+							"play_speed": 0.8,
+							"stamina": 3,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1,
+								"impact": 0.5,
+								"armor_negation": 1
+							}	
+						}	
+                    ]                 
+				},
+				{
+					"weight": 103,
+					"canBeInterrupted": true,
+					"looping": false,
+					"cooldown": 60,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 5.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight:biped/combat/longsword_airslash",
+							"play_speed": 0.8,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1,
+		    				"damage_modifier": {
+								"damage": 1.2,
+								"impact": 1.2,
+								"armor_negation": 1.5
+							}
+						}
+                    ]                 
+				}
+			]
+		}
+	]
+}
