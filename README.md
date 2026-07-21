@@ -40,8 +40,7 @@
 <img width="854" height="487" alt="录制_2026_07_21_22_06_16_325" src="https://github.com/user-attachments/assets/1412cdf9-326b-4d95-b92b-df6d8e678274" />
 
 ### Community Edition
-<img width="854" height="480" alt="CE-compressed" src="https://github.com/user-attachments/assets/e8b0e199-4c77-4647-9ff4-ee53b5f12d3c" />
-
+<img width="854" height="480" alt="CE-compressed" src="https://github.com/user-attachments/assets/8949e728-6017-43c4-b5d4-78258904ee3a" />
 
 NPC attacks correctly apply Epic Fight stun effects.
 
