@@ -17,6 +17,7 @@
   ],
   "client": [
     "IMixinRenderEngine",
+    "MixinAdvanceHealthBar",
     "MixinGuiCreationEntities",
     "MixinLayerHeadwear",
     "MixinRenderEngine",

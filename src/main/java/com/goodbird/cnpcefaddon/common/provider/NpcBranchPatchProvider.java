@@ -32,4 +32,12 @@ public class NpcBranchPatchProvider extends MobPatchReloadListener.AbstractMobPa
     public void clear(){
         providers.clear();
     }
+
+    public void resetProviders(List<Pair<ResLocPredicate, MobPatchReloadListener.AbstractMobPatchProvider>> newProviders) {
+        this.providers = newProviders;
+    }
+
+    public List<Pair<ResLocPredicate, MobPatchReloadListener.AbstractMobPatchProvider>> getProviders() {
+        return this.providers;
+    }
 }

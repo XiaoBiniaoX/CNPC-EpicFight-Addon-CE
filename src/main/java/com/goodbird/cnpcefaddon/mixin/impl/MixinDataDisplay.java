@@ -1,10 +1,12 @@
 package com.goodbird.cnpcefaddon.mixin.impl;
 
+import com.goodbird.cnpcefaddon.common.CapabilityCacheRefresher;
 import com.goodbird.cnpcefaddon.mixin.IAttributeMap;
 import com.goodbird.cnpcefaddon.mixin.IDataDisplay;
 import com.goodbird.cnpcefaddon.mixin.IMixinCapabilityDispatcher;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.common.capabilities.CapabilityDispatcher;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -43,7 +45,8 @@ public class MixinDataDisplay implements IDataDisplay {
             cNPC_EpicFight_Addon$updateModelCap();
             if(npc.isKilled()) {
                 LivingEntityPatch<?> patch = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
-                patch.onDeath(new LivingDeathEvent(npc, npc.damageSources().generic()));
+                if(patch != null)
+                    patch.onDeath(new LivingDeathEvent(npc, npc.damageSources().generic()));
             }
         }
     }
@@ -69,7 +72,8 @@ public class MixinDataDisplay implements IDataDisplay {
 
     @Unique
     private void cNPC_EpicFight_Addon$updateModelCap(){
-        ICapabilityProvider[] caps = ((IMixinCapabilityDispatcher)(Object)((MixinCapabilityProvider)npc).invokeGetCapabilities()).getCaps();
+        CapabilityDispatcher dispatcher = ((MixinCapabilityProvider)npc).invokeGetCapabilities();
+        ICapabilityProvider[] caps = ((IMixinCapabilityDispatcher)(Object) dispatcher).getCaps();
         EntityPatchProvider newProvider = new EntityPatchProvider(npc);
         if(newProvider.get()==null) return;
         ((IAttributeMap)npc.getAttributes()).setSupplier(new EpicFightAttributeSupplier(((IAttributeMap)npc.getAttributes()).getSupplier()));
@@ -88,8 +92,10 @@ public class MixinDataDisplay implements IDataDisplay {
                 ICapabilityProvider[] newCaps = new ICapabilityProvider[caps.length+1];
                 System.arraycopy(caps, 0, newCaps, 0, caps.length);
                 newCaps[caps.length] = newProvider;
-                ((IMixinCapabilityDispatcher)(Object)((MixinCapabilityProvider)npc).invokeGetCapabilities()).setCaps(newCaps);
+                ((IMixinCapabilityDispatcher)(Object) dispatcher).setCaps(newCaps);
+                caps = newCaps;
             }
-        } //TODO remove one
+            CapabilityCacheRefresher.refresh(dispatcher, caps);
+        }
     }
 }
