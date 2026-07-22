@@ -5,10 +5,10 @@
 	"isHumanoid": true,
 	"faction": "villager",
 	"attributes": {
-			"impact": 0.5,
-			"armor_negation": 0.0,
-			"max_strikes": 1,
-			"chasing_speed": 0.7,
+			"impact": 2.0,
+			"armor_negation": 5.0,
+			"max_strikes": 2,
+			"chasing_speed": 0.8,
 							"scale": 1.0
 	},
 	"default_livingmotions": {
@@ -19,6 +19,20 @@
 							"fall": "epicfight:biped/living/fall",
 			"death": "epicfight:biped/living/death"
 	},
+	"humanoid_weapon_motions": [
+		{"weapon_categories": ["greatsword"], "style": "common",
+		 "livingmotions": {"idle": "epicfight:biped/living/hold_greatsword", "walk": "epicfight:biped/living/walk_twohand", "chase": "epicfight:biped/living/walk_twohand"}},
+		{"weapon_categories": ["longsword"], "style": "common",
+		 "livingmotions": {"idle": "epicfight:biped/living/hold_longsword", "walk": "epicfight:biped/living/walk_longsword", "chase": "epicfight:biped/living/walk_longsword"}},
+		{"weapon_categories": ["uchigatana"], "style": "common",
+		 "livingmotions": {"idle": "epicfight:biped/living/hold_uchigatana", "walk": "epicfight:biped/living/walk", "chase": "epicfight:biped/living/walk"}},
+		{"weapon_categories": ["tachi"], "style": "common",
+		 "livingmotions": {"idle": "epicfight:biped/living/hold_tachi", "walk": "epicfight:biped/living/walk", "chase": "epicfight:biped/living/walk"}},
+		{"weapon_categories": ["spear"], "style": "common",
+		 "livingmotions": {"idle": "epicfight:biped/living/hold_spear", "walk": "epicfight:biped/living/walk_twohand", "chase": "epicfight:biped/living/walk_twohand"}},
+		{"weapon_categories": ["sword", "axe", "dagger"], "style": "common",
+		 "livingmotions": {"walk": "epicfight:biped/living/walk", "chase": "epicfight:biped/living/walk"}}
+	],
 	"stun_animations": {
 			"short": "epicfight:biped/combat/hit_short",
 			"long": "epicfight:biped/combat/hit_long",

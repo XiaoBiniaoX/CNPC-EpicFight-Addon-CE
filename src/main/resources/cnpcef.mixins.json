@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "top.bincnpcef.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "cnpcef.refmap.json",
+  "mixins": [
+    "IAttachmentEntityPatchProvider",
+    "impl.MixinDataDisplay",
+    "impl.MixinEntityNpcInterface",
+    "impl.MixinLivingEntityHurt",
+    "impl.MixinCustomHumanoidMobPatch",
+    "impl.ICustomMobPatchProvider",
+    "impl.ICustomHumanoidMobPatchProvider"
+  ],
+  "client": [
+    "impl.MixinRenderEngine",
+    "impl.MixinGuiCreationEntities",
+    "impl.IMixinRenderEngine"
+  ],
+  "server": []
+}

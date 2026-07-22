@@ -1,0 +1,46 @@
+# This is a neoforge.mods.toml file. Describes your mod to the mod loader.
+# See: https://github.com/toml-lang/toml
+
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_display_name}"
+authors="${mod_author}"
+description='''
+CNPC-EpicFight-Addon-CE - Custom NPCs integration with Epic Fight for Minecraft 1.21.1
+'''
+
+[[mixins]]
+config="${mod_id}.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="epicfight"
+    type="required"
+    versionRange="[21.17.3,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="customnpcs"
+    type="required"
+    versionRange="[1.21.1,)"
+    ordering="AFTER"
+    side="BOTH"

@@ -5,10 +5,10 @@
 	"isHumanoid": true,
 	"faction": "villager",
 	"attributes": {
-			"impact": 0.5,
+			"impact": 2,
 			"armor_negation": 0.0,
 			"max_strikes": 1,
-			"chasing_speed": 0.7,
+			"chasing_speed": 1.1,
 							"scale": 1.0
 	},
 	"default_livingmotions": {

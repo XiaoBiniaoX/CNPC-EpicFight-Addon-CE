@@ -1,205 +1,180 @@
-buildscript {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
-        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-        jcenter()
-        mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '[6.0,6.2)', changing: true
-        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
-    }
-    gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xmaxerrs" << "4000"
-        }
-    }
-}
 plugins {
-    id 'eclipse'
+    id 'java-library'
     id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'idea'
 }
-apply plugin: 'net.minecraftforge.gradle'
-apply plugin: 'org.spongepowered.mixin'
 
-version = "1.20.1." + getDate()
-group = "noppes.npcs" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "CNPC-EpicFight-Addon-CE-1.20.1"
-
-def getDate() {
-    return new Date().format('yyyyMMdd')
+tasks.named('wrapper', Wrapper).configure {
+    // 在此定义 wrapper 值，这样就不必在更新 gradlew.properties 时每次都修改
+    // 切换为 Wrapper.DistributionType.ALL 会下载完整的 Gradle 源码，附带文档悬停提示
+    // 但这会增加 Gradle 的文件大小。如果切换为 ALL，之后请重新运行 Gradle wrapper 任务两次
+    // （通过检查 gradle/wrapper/gradle-wrapper.properties 确认 distributionUrl 是否指向 `-all`）
+    distributionType = Wrapper.DistributionType.BIN
 }
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-minecraft {
-    // The mappings can be changed at any time, and must be in the following format.
-    // snapshot_YYYYMMDD   Snapshot are built nightly.
-    // stable_#            Stables are built at the discretion of the MCP team.
-    // Use non-default mappings at your own risk. they may not always work.
-    // Simply re-run your setup task after changing the mappings to update your workspace.
-    mappings channel: 'official', version: '1.20.1'
-    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
-    
-    // accessTransformer = file('build/resources/main/META-INF/accesstransformer.cfg')
-	// accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+version = mod_version + "-" + new Date().format('yyyyMMdd')
+group = mod_group_id
 
-    sourceSets.main.java.srcDirs += 'src/api/java'
-    // Default run configurations.
-    // These can be tweaked, removed, or duplicated as needed.
+sourceSets.main.resources {
+    // 包含数据生成器生成的资源
+    srcDir('src/generated/resources')
+
+    // 从最终输出中排除仅用于开发环境的资源
+    exclude("**/*.bbmodel") // BlockBench 项目文件
+    exclude("src/generated/**/.cache") // 数据生成缓存文件
+}
+
+repositories {
+    // 如果下方某些依赖需要，可在此添加其他仓库
+}
+
+base {
+    archivesName = "CNPC-EpicFight-Addon-CE"
+}
+
+// Mojang 在 1.21.1 中为最终用户提供了 Java 21，因此模组应面向 Java 21
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    // 指定要使用的 NeoForge 版本
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    // 此行可省略。Access Transformer 会被自动检测
+    // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
+
+    // 默认运行配置
+    // 可根据需要调整、删除或复制
     runs {
         client {
-            workingDirectory project.file('run')
-            arg "-mixin.config=cnpcefaddon.mixins.json"
+            client()
 
-            // Recommended logging data for a userdev environment
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
-
-            // Recommended logging level for the console
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                cnpcefaddon {
-                    source sourceSets.main
-                }
-            }
+            // 逗号分隔的要加载游戏测试的命名空间列表。空字符串 = 所有命名空间
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
         server {
-            workingDirectory project.file('run')
-            arg "-mixin.config=cnpcefaddon.mixins.json"
-
-            // Recommended logging data for a userdev environment
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
-
-            // Recommended logging level for the console
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                cnpcefaddon {
-                    source sourceSets.main
-                }
-            }
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
-        // This run config launches GameTestServer and runs all registered gametests, then exits.
-        // By default, the server will crash when no gametests are provided.
-        // The gametest system is also enabled by default for other run configs under the /test command.
+        // 此运行配置启动 GameTestServer 并运行所有已注册的游戏测试，然后退出
+        // 默认情况下，如果没有提供游戏测试，服务器将崩溃
+        // 其他运行配置下的 /test 命令也默认启用游戏测试系统
         gameTestServer {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be added/remove as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-
-            // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-            property 'forge.enabledGameTestNamespaces', 'cnpcefaddon'
-
-            mods {
-                cnpcefaddon {
-                    source sourceSets.main
-                }
-            }
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
         data {
-            workingDirectory project.file('run')
-            arg "-mixin.config=cnpcefaddon.mixins.json"
+            data()
 
-            // Recommended logging data for a userdev environment
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            // 覆盖上面 configureEach 中设置的 workingDirectory 的示例，如果要用请取消注释
+            // gameDirectory = project.file('run-data')
 
-            // Recommended logging level for the console
-            property 'forge.logging.console.level', 'debug'
+            // 指定数据生成的 modid、输出路径和现有资源路径
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
 
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            args '--mod', 'cnpcefaddon', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        // 适用于上述所有运行配置
+        configureEach {
+            // 推荐的 userdev 环境日志标记
+            // 可添加/删除标记，用逗号分隔
+            // "SCAN": 模组扫描
+            // "REGISTRIES": 注册表事件触发
+            // "REGISTRYDUMP": 获取所有注册表内容
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
 
-            mods {
-                cnpcefaddon {
-                    source sourceSets.main
-                }
-            }
+            // 推荐的控制台日志级别
+            // 可设置不同级别
+            // 请阅读: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        // 定义模组与源码的绑定关系
+        // 用于告诉游戏哪些源码属于哪个模组
+        // 多模组项目应为每个模组定义一个
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
         }
     }
 }
 
-// Include resources generated by data generators.
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-
-repositories {
-    // Put repositories for dependencies here
-    // ForgeGradle automatically adds the Forge maven and Maven Central for you
-
-    // If you have mod jar dependencies in ./libs, you can declare them as a repository like so:
-    flatDir {
-        dir 'lib'
-    }
+// 设置名为 'localRuntime' 的依赖配置
+// 应使用此配置代替 'runtimeOnly' 来声明运行时测试需要的依赖
+// 这是"可选的"，不会被本模组的依赖方拉取
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
 }
 
 dependencies {
-    // Specify the version of Minecraft to use, If this is any group other then 'net.minecraft' it is assumed
-    // that the dep is a ForgeGradle 'patcher' dependency. And it's patches will be applied.
-    // The userdev artifact is a special name and will get all sorts of transformations applied to it.
-    minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-    implementation fg.deobf('lib:CustomNPCs:1.20.1-GBPort-Unofficial-1.20.1.20260711')
-    implementation fg.deobf('lib:epic-fight:20.14.17-mc1.20.1-forge')
-    implementation fg.deobf('lib:indestructible:20.12.0')
-//    implementation fg.deobf('lib:indestructible:20.6.7')
-    //compile group: 'com.h2database', name: 'h2', version: '1.4.200'
-    //extraLibs group: 'com.h2database', name: 'h2', version: '1.4.200'
-    //configurations.compile.extendsFrom(configurations.extraLibs)
+    // libs 中的前置模组（自动加载 libs 目录下所有 jar）
+    implementation fileTree(dir: 'libs', include: '*.jar')
 
-    // You may put jars on which you depend on in ./libs or you may define them like so..
-    // compile "some.group:artifact:version:classifier"
-    // compile "some.group:artifact:version"
-
-    // Real examples
-    // compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
-    // compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
-
-    // The 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
-    // provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-
-    // These dependencies get remapped to your current MCP mappings
-    // deobf 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-
-    // For more info...
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 }
 
-// Example for how to get properties into the manifest for reading by the runtime..
-jar {
-    manifest {
-        attributes([
-            "Specification-Title": "cnpcefaddon",
-            "Specification-Vendor": "cnpcefaddon",
-            "Specification-Version": "1", // We are version 1 of ourselves
-            "Implementation-Title": project.name,
-            "Implementation-Version": project.version,
-            "Implementation-Vendor" :"cnpcefaddon",
-            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-            "MixinConfigs": "cnpcefaddon.mixins.json"
-        ])
+test {
+    useJUnitPlatform()
+}
+
+// 此代码块在指定的资源目标文件中展开所有声明的替换属性
+// 缺少属性将导致错误。属性使用 ${} Groovy 语法展开
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_display_name       : mod_display_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_author             : mod_author,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+// 将 "generateModMetadata" 的输出作为构建的输入目录
+// 通过 Gradle 和 IDE 构建时均可工作
+sourceSets.main.resources.srcDir generateModMetadata
+// 避免手动运行 "generateModMetadata"，使其在每次项目重载时自动运行
+neoForge.ideSyncTask generateModMetadata
+
+// 使用 maven-publish 插件发布到 Maven 的示例配置
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
     }
 }
 
-mixin {
-    add sourceSets.main, "cnpcefaddon.refmap.json"
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // 使用 UTF-8 字符集编译 Java
 }
 
-jar.finalizedBy('reobfJar')
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+// IDEA 不再自动下载依赖的源码/javadoc jar，因此需要显式启用此行为
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
 }
