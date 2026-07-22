@@ -5,10 +5,10 @@
 	"isHumanoid": true,
 	"faction": "undead",
 	"attributes": {				
-		"impact": 2.0,
+		"impact": 2.5,
 		"armor_negation": 5.0,
 		"max_strikes": 3,
-		"chasing_speed": 1,
+		"chasing_speed": 1.2,
         "scale": 1.0,
 		"max_stamina": 85,
 		"stamina_regan_delay": 60,

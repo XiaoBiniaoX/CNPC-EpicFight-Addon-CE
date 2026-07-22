@@ -84,6 +84,8 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             RenderStorage.renderersMap = new HashMap<>();
         }
 
+        PlaySpeedCache.clear();
+
         for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
             CompoundTag tag = null;
             try {
@@ -94,6 +96,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             }
             if (tag != null) {
                 try {
+                    PlaySpeedCache.parseAndRegister(entry.getKey(), tag);
                     MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
                     CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                     filteredTag.putString("patchType", "NORMAL");
@@ -126,6 +129,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                         try (Reader reader = stack.get(i).openAsReader()) {
                             JsonElement element = GsonHelper.fromJson(GSON, reader, JsonElement.class);
                             CompoundTag tag = TagParser.parseTag(element.toString());
+                            PlaySpeedCache.parseAndRegister(key, tag);
                             MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
                             CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                             filteredTag.putString("patchType", "NORMAL");
@@ -220,6 +224,8 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
     public static void processServerPacket(SPDatapackSync packet) {
         LOGGER.info("processServerPacket start - received {} entries from server", packet.getTags().length);
 
+        PlaySpeedCache.clear();
+
         NpcBranchPatchProvider tempProvider = new NpcBranchPatchProvider();
         Set<ResourceLocation> tempModels = new HashSet<>();
         Map<ResourceLocation, PatchedEntityRenderer> oldRenderers = RenderStorage.renderersMap;
@@ -230,6 +236,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             ResourceLocation key = null;
             try {
                 key = ResourceLocation.parse(tag.getString("id"));
+                PlaySpeedCache.parseAndRegister(key, tag);
                 boolean disabled = tag.contains("disabled") && tag.getBoolean("disabled");
                 MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, true, Minecraft.getInstance().getResourceManager());
                 if (!disabled) {

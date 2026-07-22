@@ -63,6 +63,8 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         Set<ResourceLocation> tempModels = new HashSet<>();
         Map<ResourceLocation, CompoundTag> tempTags = new HashMap<>();
 
+        PlaySpeedCache.clear();
+
         for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
             CompoundTag tag = null;
             try {
@@ -73,6 +75,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
             }
             if (tag != null) {
                 try {
+                    PlaySpeedCache.parseAndRegister(entry.getKey(), tag);
                     AdvNpcPatchProvider provider = deserializeMobPatchProvider(resourceManagerIn, tag, false);
                     CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                     filteredTag.putString("patchType", "ADVANCED");
@@ -100,6 +103,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
                     try (Reader reader = stack.get(i).openAsReader()) {
                         JsonElement element = GsonHelper.fromJson(GSON, reader, JsonElement.class);
                         CompoundTag tag = TagParser.parseTag(element.toString());
+                        PlaySpeedCache.parseAndRegister(samuraiKey, tag);
                         AdvNpcPatchProvider provider = deserializeMobPatchProvider(resourceManagerIn, tag, false);
                         CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                         filteredTag.putString("patchType", "ADVANCED");

@@ -5,7 +5,7 @@
 	"isHumanoid": true,
 	"faction": "villager",
 	"attributes": {
-			"impact": 0.5,
+			"impact": 2.3,
 			"armor_negation": 0.0,
 			"max_strikes": 1,
 			"chasing_speed": 0.7,
