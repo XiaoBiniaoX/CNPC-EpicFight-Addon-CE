@@ -16,6 +16,7 @@ import top.bincnpcef.mixin.IAttachmentEntityPatchProvider;
 import top.bincnpcef.api.IDataDisplay;
 import yesman.epicfight.registry.entries.EpicFightAttachmentTypes;
 import yesman.epicfight.world.capabilities.entitypatch.EntityPatch;
+import yesman.epicfight.world.capabilities.entitypatch.HumanoidMobPatch;
 import yesman.epicfight.world.capabilities.provider.AttachmentEntityPatchProvider;
 
 @Mixin(value = DataDisplay.class, priority = 1001)
@@ -79,6 +80,15 @@ public class MixinDataDisplay implements IDataDisplay {
                 // 首次从 NBT 加载时由 EF 事件钩子自动调用
                 if (npc.level() != null && npc.isAlive() && npc.tickCount > 0) {
                     ((EntityPatch) patch).onJoinWorld(npc, npc.level(), false);
+                }
+                // 客户端 patch 需要主动应用武器动画。服务端在 addRegularEntries 中通过
+                // MixinEntityNpcInterface.cnpcef$setEFCombatAI 调用 modifyLivingMotionByCurrentItem，
+                // 但客户端不执行该路径。退出重进时若不在此处应用，客户端会退化为空手站姿。
+                if (npc.level() != null && npc.level().isClientSide() && patch instanceof HumanoidMobPatch<?> humanoidPatch) {
+                    try {
+                        humanoidPatch.modifyLivingMotionByCurrentItem(true);
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         } catch (Exception e) {
