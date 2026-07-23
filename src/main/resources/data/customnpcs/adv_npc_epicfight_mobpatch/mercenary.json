@@ -1,15 +1,15 @@
 {
 	"model": "epicfight:entity/biped",
 	"armature": "epicfight:entity/biped",
-	"renderer": "zombie",
+	"renderer": "epicfight:custom",
 	"isHumanoid": true,
-	"faction": "undead",
+	"faction": "villager",
 	"attributes": {
 			"impact": 2.5,
-			"armor_negation": 5.0,
-			"max_strikes": 3,
-			"chasing_speed": 1.2,
-							"scale": 1.0
+			"armor_negation": 2,
+			"max_strikes": 2,
+			"chasing_speed": 1,
+							"scale": 1
 	},
 	"default_livingmotions": {
 			"idle": "epicfight:biped/living/idle",

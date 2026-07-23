@@ -1,6 +1,7 @@
 package com.goodbird.cnpcefaddon.mixin.impl;
 
 import com.goodbird.cnpcefaddon.common.CapabilityCacheRefresher;
+import com.goodbird.cnpcefaddon.common.patch.NpcHumanoidPatch;
 import com.goodbird.cnpcefaddon.mixin.IAttributeMap;
 import com.goodbird.cnpcefaddon.mixin.IDataDisplay;
 import com.goodbird.cnpcefaddon.mixin.IMixinCapabilityDispatcher;
@@ -79,6 +80,9 @@ public class MixinDataDisplay implements IDataDisplay {
         ((IAttributeMap)npc.getAttributes()).setSupplier(new EpicFightAttributeSupplier(((IAttributeMap)npc.getAttributes()).getSupplier()));
         ((EntityPatch)newProvider.get()).onConstructed(npc);
         ((EntityPatch)newProvider.get()).onJoinWorld(npc, new EntityJoinLevelEvent(npc,npc.level()));
+        if (npc.level().isClientSide() && newProvider.get() instanceof NpcHumanoidPatch<?> npcPatch) {
+            npcPatch.applyWeaponLivingMotions();
+        }
         if(newProvider.hasCapability()){
             boolean hasFoundAny = false;
             for(int i = 0; i<caps.length; i++){
