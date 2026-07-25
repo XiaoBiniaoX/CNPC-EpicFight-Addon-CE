@@ -12,6 +12,7 @@
     "MixinDataDisplay",
     "MixinEntityLivingWrapper",
     "MixinEntityNpcInterface",
+    "MixinEntityNPCInvisible",
     "MixinLivingEntityHurt",
     "MixinNPCWrapper"
   ],
@@ -20,7 +21,12 @@
     "MixinAdvanceHealthBar",
     "MixinGuiCreationEntities",
     "MixinLayerHeadwear",
+    "MixinLivingEntityPatch",
+    "MixinPCustomEntityRenderer",
+    "MixinPatchedLivingEntityRenderer",
     "MixinRenderEngine",
+    "MixinRenderEngineEvents",
+    "MixinSkinnedMeshDraw",
     "MixinTargetIndicator"
   ],
   "minVersion": "0.8"

@@ -22,6 +22,7 @@ public class PlaySpeedCache {
 
     public static void clear() {
         CACHE.clear();
+        EntityPlaySpeedManager.clearPatched();
     }
 
     public static void parseAndRegister(ResourceLocation entityType, CompoundTag tag) {
