@@ -27,7 +27,8 @@ public class AdvNpcPatch<T extends PathfinderMob> extends AdvancedCustomHumanoid
     }
 
     public OpenMatrix4f getModelMatrix(float partialTicks) {
-        float scale = ((EntityNPCInterface)original).display.getSize()/5f;
+        EntityNPCInterface npc = (EntityNPCInterface) original;
+        float scale = (npc.display != null) ? npc.display.getSize() / 5f : 1f;
         return super.getModelMatrix(partialTicks).scale(scale, scale, scale);
     }
 }

@@ -4,6 +4,7 @@ import com.goodbird.cnpcefaddon.mixin.IDataDisplay;
 import net.minecraft.resources.ResourceLocation;
 import noppes.npcs.api.wrapper.EntityLivingWrapper;
 import noppes.npcs.api.wrapper.NPCWrapper;
+import noppes.npcs.controllers.VisibilityController;
 import noppes.npcs.entity.EntityNPCInterface;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -17,5 +18,14 @@ public abstract class MixinNPCWrapper<T extends EntityNPCInterface> extends Enti
     @Unique
     public void setEFModel(String modelPath){
         ((IDataDisplay)entity.display).setEFModel(ResourceLocation.parse(modelPath));
+    }
+
+    @Unique
+    public void setVisible(int type){
+        entity.display.setVisible(type);
+        if (entity.level() != null && !entity.level().isClientSide()) {
+            VisibilityController.instance.trackNpc(entity);
+            entity.updateClient();
+        }
     }
 }

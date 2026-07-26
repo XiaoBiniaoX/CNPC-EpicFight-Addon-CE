@@ -11,6 +11,7 @@ import net.minecraftforge.common.capabilities.CapabilityDispatcher;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import noppes.npcs.controllers.VisibilityController;
 import noppes.npcs.entity.EntityNPCInterface;
 import noppes.npcs.entity.data.DataDisplay;
 import org.spongepowered.asm.mixin.Mixin;
@@ -42,12 +43,20 @@ public class MixinDataDisplay implements IDataDisplay {
     @Inject(method = "readToNBT", at = @At("HEAD"), remap = false)
     public void readFromNBT(CompoundTag nbttagcompound, CallbackInfo ci){
         if(nbttagcompound.contains("efModel")){
-            cNPC_EpicFight_Addon$efModelResLoc = ResourceLocation.parse(nbttagcompound.getString("efModel"));
-            cNPC_EpicFight_Addon$updateModelCap();
-            if(npc.isKilled()) {
-                LivingEntityPatch<?> patch = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
-                if(patch != null)
-                    patch.onDeath(new LivingDeathEvent(npc, npc.damageSources().generic()));
+            ResourceLocation newModel = ResourceLocation.parse(nbttagcompound.getString("efModel"));
+            boolean changed = cNPC_EpicFight_Addon$efModelResLoc == null || !cNPC_EpicFight_Addon$efModelResLoc.equals(newModel);
+            cNPC_EpicFight_Addon$efModelResLoc = newModel;
+            if (changed) {
+                try {
+                    cNPC_EpicFight_Addon$updateModelCap();
+                } catch (Exception e) {
+                    System.err.println("[CNPCEF] updateModelCap failed: " + e.getMessage());
+                }
+                if(npc.isKilled()) {
+                    LivingEntityPatch<?> patch = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
+                    if(patch != null)
+                        patch.onDeath(new LivingDeathEvent(npc, npc.damageSources().generic()));
+                }
             }
         }
     }

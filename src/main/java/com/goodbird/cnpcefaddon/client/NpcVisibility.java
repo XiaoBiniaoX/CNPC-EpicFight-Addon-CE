@@ -41,7 +41,6 @@ public final class NpcVisibility {
         if (player == null || isVisibilityException(player)) {
             return false;
         }
-        // Fully hidden when not visible to this player (covers visible=1 and visible=2 + failed availability)
         return !npc.display.isVisibleTo(player);
     }
 
