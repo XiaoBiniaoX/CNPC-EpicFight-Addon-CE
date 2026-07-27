@@ -1,6 +1,8 @@
 package com.goodbird.cnpcefaddon;
 
+import com.goodbird.cnpcefaddon.common.AddonConfig;
 import com.goodbird.cnpcefaddon.common.AdvNpcPatchReloader;
+import com.goodbird.cnpcefaddon.common.FactionDamageHandler;
 import com.goodbird.cnpcefaddon.common.NpcPatchReloadListener;
 import com.goodbird.cnpcefaddon.common.network.NetworkHandler;
 import com.goodbird.cnpcefaddon.common.network.SPDatapackSync;
@@ -13,7 +15,9 @@ import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.OnDatapackSyncEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import noppes.npcs.CustomEntities;
@@ -30,6 +34,8 @@ public class CNPCEpicFightAddon {
         bus.addListener(this::doCommonStuff);
         MinecraftForge.EVENT_BUS.addListener(this::reloadListenerEvent);
         MinecraftForge.EVENT_BUS.addListener(this::onDatapackSync);
+        MinecraftForge.EVENT_BUS.register(FactionDamageHandler.class);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AddonConfig.SPEC);
     }
 
     private void doCommonStuff(FMLCommonSetupEvent event) {

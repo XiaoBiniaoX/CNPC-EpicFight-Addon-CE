@@ -9,4 +9,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface MixinCapabilityProvider {
     @Invoker(remap = false)
     CapabilityDispatcher invokeGetCapabilities();
+
+    @Invoker(remap = false)
+    void invokeGatherCapabilities();
 }

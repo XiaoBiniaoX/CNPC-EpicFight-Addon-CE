@@ -33,6 +33,8 @@ public class MixinDataDisplay implements IDataDisplay {
     EntityNPCInterface npc;
     @Unique
     private ResourceLocation cNPC_EpicFight_Addon$efModelResLoc = null;
+    @Unique
+    private boolean cNPC_EpicFight_Addon$capApplied = false;
 
     @Inject(method = "save", at = @At("HEAD"), remap = false)
     public void writeToNBT(CompoundTag nbttagcompound, CallbackInfoReturnable<CompoundTag> cir) {
@@ -46,13 +48,14 @@ public class MixinDataDisplay implements IDataDisplay {
             ResourceLocation newModel = ResourceLocation.parse(nbttagcompound.getString("efModel"));
             boolean changed = cNPC_EpicFight_Addon$efModelResLoc == null || !cNPC_EpicFight_Addon$efModelResLoc.equals(newModel);
             cNPC_EpicFight_Addon$efModelResLoc = newModel;
-            if (changed) {
+            if (changed || !cNPC_EpicFight_Addon$capApplied) {
                 try {
                     cNPC_EpicFight_Addon$updateModelCap();
+                    cNPC_EpicFight_Addon$capApplied = true;
                 } catch (Exception e) {
                     System.err.println("[CNPCEF] updateModelCap failed: " + e.getMessage());
                 }
-                if(npc.isKilled()) {
+                if(changed && npc.isKilled()) {
                     LivingEntityPatch<?> patch = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
                     if(patch != null)
                         patch.onDeath(new LivingDeathEvent(npc, npc.damageSources().generic()));
@@ -64,8 +67,10 @@ public class MixinDataDisplay implements IDataDisplay {
     @Override
     public void setEFModel(ResourceLocation modelPath, boolean server) {
         cNPC_EpicFight_Addon$efModelResLoc = modelPath;
+        cNPC_EpicFight_Addon$capApplied = false;
         if(server) {
             cNPC_EpicFight_Addon$updateModelCap();
+            cNPC_EpicFight_Addon$capApplied = true;
             npc.updateClient();
         }
     }
@@ -83,6 +88,11 @@ public class MixinDataDisplay implements IDataDisplay {
     @Unique
     private void cNPC_EpicFight_Addon$updateModelCap(){
         CapabilityDispatcher dispatcher = ((MixinCapabilityProvider)npc).invokeGetCapabilities();
+        if (dispatcher == null) {
+            ((MixinCapabilityProvider)npc).invokeGatherCapabilities();
+            dispatcher = ((MixinCapabilityProvider)npc).invokeGetCapabilities();
+            if (dispatcher == null) return;
+        }
         ICapabilityProvider[] caps = ((IMixinCapabilityDispatcher)(Object) dispatcher).getCaps();
         EntityPatchProvider newProvider = new EntityPatchProvider(npc);
         if(newProvider.get()==null) return;
