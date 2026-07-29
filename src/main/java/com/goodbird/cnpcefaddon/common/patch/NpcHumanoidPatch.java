@@ -1,11 +1,13 @@
 package com.goodbird.cnpcefaddon.common.patch;
 
+import com.goodbird.cnpcefaddon.common.RangedMotionResolver;
 import com.goodbird.cnpcefaddon.common.provider.NpcHumanoidPatchProvider;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.item.ItemStack;
 import noppes.npcs.entity.EntityNPCInterface;
+import yesman.epicfight.api.animation.LivingMotion;
 import yesman.epicfight.api.utils.math.OpenMatrix4f;
 import yesman.epicfight.gameasset.Armatures;
 import yesman.epicfight.main.EpicFightMod;
@@ -57,5 +59,21 @@ public class NpcHumanoidPatch<T extends PathfinderMob> extends CustomHumanoidMob
         EntityNPCInterface npc = (EntityNPCInterface) original;
         float scale = (npc.display != null) ? npc.display.getSize() / 5f : 1f;
         return super.getModelMatrix(partialTicks).scale(scale, scale, scale);
+    }
+
+    /**
+     * Adds bow / crossbow aim and reload poses. Custom NPCs fires without going through
+     * item usage, so Epic Fight's own {@code isUsingItem()} checks never trigger for an NPC.
+     * See {@link RangedMotionResolver}.
+     */
+    @Override
+    public void updateMotion(boolean considerInaction) {
+        super.updateMotion(considerInaction);
+
+        LivingMotion ranged = RangedMotionResolver.resolve(this);
+
+        if (ranged != null) {
+            this.currentCompositeMotion = ranged;
+        }
     }
 }
