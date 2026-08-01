@@ -20,6 +20,18 @@ import java.util.Vector;
 
 @Mixin(value = GuiCreationEntities.class, priority = 1001)
 public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
+    /**
+     * Vertical offset of the EF config row.
+     * <p>
+     * {@code GuiCreationScreenInterface} anchors the NPC preview at {@code y = 200} (the
+     * model's feet, growing upwards) and puts the rotation slider at {@code guiTop + 210}.
+     * A 20px row at 190 therefore sits at the very bottom of the preview and directly on
+     * top of the slider -- as low as the screen allows without covering either the slider
+     * or the message label at {@code imageHeight - 10}. Being at the bottom also keeps it
+     * out of the top row, where other addons add their own widgets.
+     */
+    private static final int EF_ROW_Y = 190;
+
     public MixinGuiCreationEntities() {
         super(null);
     }
@@ -34,8 +46,14 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
         if(((IDataDisplay)npc.display).hasEFModel()){
             curName = ((IDataDisplay)npc.display).getEFModel().toString();
         }
-        addLabel(new GuiLabel(312,"EpicFight Config:", this.guiLeft + 124, this.guiTop + 24,0xffffff));
-        this.addButton(new GuiButtonNop(this, 302, this.guiLeft + 230, this.guiTop + 22, 150, 20, curName, (b) -> {
+
+        // Same column as the rotation slider below it; the label sits in the gap between
+        // the entity scroll list (ends at guiLeft + 120) and the button.
+        int buttonX = this.guiLeft + this.xOffset + 142;
+        int labelX = this.guiLeft + 130;
+
+        addLabel(new GuiLabel(312, "EF Config:", labelX, this.guiTop + EF_ROW_Y + 6, 0xffffff));
+        this.addButton(new GuiButtonNop(this, 302, buttonX, this.guiTop + EF_ROW_Y, 120, 20, curName, (b) -> {
             setSubGui(new GuiStringSelection(this, "Selecting epicfight config:", list, name -> {
                 ((IDataDisplay)npc.display).setEFModel(ResourceLocation.parse(name), false);
                 getButton(302).setDisplayText(name);

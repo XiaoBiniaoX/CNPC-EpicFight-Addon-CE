@@ -19,7 +19,7 @@ license="CC BY-NC"
 [[mods]] #mandatory
     modId="cnpcefaddon" #mandatory
     version="${file.jarVersion}" #mandatory
-    displayName="CNPC-EpicFight-Addon-CE-1.20.1" #mandatory
+    displayName="CNPC-EpicFight-Addon-CE-1.20.1-Forge" #mandatory
     #updateJSONURL="" #optional
     displayURL="" #optional
     #logoFile="" #optional

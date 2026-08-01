@@ -1,11 +1,13 @@
 package com.goodbird.cnpcefaddon.common.patch;
 
+import com.goodbird.cnpcefaddon.common.NpcBowDrawFlow;
 import com.goodbird.cnpcefaddon.common.RangedMotionResolver;
 import com.goodbird.cnpcefaddon.common.provider.NpcHumanoidPatchProvider;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import noppes.npcs.entity.EntityNPCInterface;
 import yesman.epicfight.api.animation.LivingMotion;
 import yesman.epicfight.api.utils.math.OpenMatrix4f;
@@ -30,6 +32,19 @@ public class NpcHumanoidPatch<T extends PathfinderMob> extends CustomHumanoidMob
         this.animator = EpicFightSharedConstants.getAnimator(this);
         this.initAnimator(animator);
         animator.postInit();
+    }
+
+    /**
+     * Clears a bow draw or crossbow charge left over from a previous session; see
+     * {@link com.goodbird.cnpcefaddon.common.NpcBowDrawFlow}.
+     */
+    @Override
+    public void onJoinWorld(T entityIn, EntityJoinLevelEvent event) {
+        super.onJoinWorld(entityIn, event);
+
+        if (entityIn instanceof EntityNPCInterface npc) {
+            NpcBowDrawFlow.reset(npc);
+        }
     }
 
     public void applyWeaponLivingMotions() {

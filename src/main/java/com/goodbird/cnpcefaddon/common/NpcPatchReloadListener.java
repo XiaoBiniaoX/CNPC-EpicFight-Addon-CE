@@ -84,6 +84,8 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             RenderStorage.renderersMap = new HashMap<>();
         }
 
+        // Full wipe is safe here: this listener runs before AdvNpcPatchReloader, which
+        // re-registers its own patches right after. parseAndRegister() also clears per key.
         PlaySpeedCache.clear();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
@@ -101,6 +103,9 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                     CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                     filteredTag.putString("patchType", "NORMAL");
                     filteredTag.putString("id", entry.getKey().toString());
+                    // filterClientData drops combat_behavior, so ship the parsed play_speed
+                    // values separately or remote clients animate at the wrong rate.
+                    filteredTag.put("cnpcefPlaySpeeds", PlaySpeedCache.writeSpeeds(entry.getKey()));
                     if (EpicFightSharedConstants.isPhysicalClient())
                         RenderStorage.registerRenderer(entry.getKey(), tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
                     tempProvider.addProvider(entry.getKey(), provider);
@@ -134,6 +139,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                             CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                             filteredTag.putString("patchType", "NORMAL");
                             filteredTag.putString("id", key.toString());
+                            filteredTag.put("cnpcefPlaySpeeds", PlaySpeedCache.writeSpeeds(key));
                             if (EpicFightSharedConstants.isPhysicalClient())
                                 RenderStorage.registerRenderer(key, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
                             tempProvider.addProvider(key, provider);
@@ -224,6 +230,8 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
     public static void processServerPacket(SPDatapackSync packet) {
         LOGGER.info("processServerPacket start - received {} entries from server", packet.getTags().length);
 
+        // Full wipe is safe here: this listener runs before AdvNpcPatchReloader, which
+        // re-registers its own patches right after. parseAndRegister() also clears per key.
         PlaySpeedCache.clear();
 
         NpcBranchPatchProvider tempProvider = new NpcBranchPatchProvider();
@@ -236,7 +244,11 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             ResourceLocation key = null;
             try {
                 key = ResourceLocation.parse(tag.getString("id"));
-                PlaySpeedCache.parseAndRegister(key, tag);
+                if (tag.contains("cnpcefPlaySpeeds")) {
+                    PlaySpeedCache.readSpeeds(key, tag.getCompound("cnpcefPlaySpeeds"));
+                } else {
+                    PlaySpeedCache.parseAndRegister(key, tag);
+                }
                 boolean disabled = tag.contains("disabled") && tag.getBoolean("disabled");
                 MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, true, Minecraft.getInstance().getResourceManager());
                 if (!disabled) {

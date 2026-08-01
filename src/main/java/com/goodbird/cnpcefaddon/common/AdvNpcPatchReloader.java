@@ -56,6 +56,15 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         super(GSON, "adv_npc_epicfight_mobpatch");
     }
 
+    /**
+     * Patch ids this listener contributed on its previous run. Kept so a reload can retract
+     * them: the shared state ({@code branchPatchProvider}, {@code AVAILABLE_MODELS},
+     * {@code TAGMAP}) is co-owned with {@link NpcPatchReloadListener}, so this listener may
+     * only remove what it added. Without this, deleting an advanced mobpatch file left the
+     * old entry alive for the rest of the session.
+     */
+    private static final Set<ResourceLocation> OWNED_KEYS = new HashSet<>();
+
     protected void apply(Map<ResourceLocation, JsonElement> objectIn, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
         LOGGER.info("AdvNpcPatchReloader.apply() start - objectIn size: {}", objectIn.size());
 
@@ -63,7 +72,15 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         Set<ResourceLocation> tempModels = new HashSet<>();
         Map<ResourceLocation, CompoundTag> tempTags = new HashMap<>();
 
-        PlaySpeedCache.clear();
+        // Retract the previous run instead of clearing everything: PlaySpeedCache and the
+        // shared registries also hold NpcPatchReloadListener's data, which must survive.
+        for (ResourceLocation owned : OWNED_KEYS) {
+            PlaySpeedCache.clear(owned);
+            NpcPatchReloadListener.branchPatchProvider.removeProvider(owned);
+            NpcPatchReloadListener.AVAILABLE_MODELS.remove(owned);
+            NpcPatchReloadListener.TAGMAP.remove(owned);
+        }
+        OWNED_KEYS.clear();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
             CompoundTag tag = null;
@@ -80,6 +97,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
                     CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                     filteredTag.putString("patchType", "ADVANCED");
                     filteredTag.putString("id", entry.getKey().toString());
+                    filteredTag.put("cnpcefPlaySpeeds", PlaySpeedCache.writeSpeeds(entry.getKey()));
                     if (EpicFightSharedConstants.isPhysicalClient())
                         RenderStorage.registerRenderer(entry.getKey(), tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
                     tempProviders.add(new Pair<>(new ResLocPredicate(entry.getKey()), provider));
@@ -108,6 +126,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
                         CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
                         filteredTag.putString("patchType", "ADVANCED");
                         filteredTag.putString("id", samuraiKey.toString());
+                        filteredTag.put("cnpcefPlaySpeeds", PlaySpeedCache.writeSpeeds(samuraiKey));
                         if (EpicFightSharedConstants.isPhysicalClient())
                             RenderStorage.registerRenderer(samuraiKey, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
                         tempProviders.add(new Pair<>(new ResLocPredicate(samuraiKey), provider));
@@ -129,6 +148,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         }
         NpcPatchReloadListener.AVAILABLE_MODELS.addAll(tempModels);
         NpcPatchReloadListener.TAGMAP.putAll(tempTags);
+        OWNED_KEYS.addAll(tempModels);
 
         EntityPatchProvider.putCustomEntityPatch(CustomEntities.entityCustomNpc, entity -> ()->NpcPatchReloadListener.branchPatchProvider.get(entity));
         LOGGER.info("AdvNpcPatchReloader.apply() end - added {} entries, AVAILABLE_MODELS now: {}",

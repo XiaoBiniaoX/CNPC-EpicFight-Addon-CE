@@ -26,7 +26,13 @@ public class NpcBranchPatchProvider extends MobPatchReloadListener.AbstractMobPa
     }
 
     public void addProvider(ResourceLocation resLoc, MobPatchReloadListener.AbstractMobPatchProvider newProv){
+        providers.removeIf(pair -> resLoc.equals(pair.getFirst().resourceLocation));
         providers.add(new Pair<>(new ResLocPredicate(resLoc), newProv));
+    }
+
+    /** Retracts a single patch, used by reload listeners that co-own this registry. */
+    public void removeProvider(ResourceLocation resLoc){
+        providers.removeIf(pair -> resLoc.equals(pair.getFirst().resourceLocation));
     }
 
     public void clear(){

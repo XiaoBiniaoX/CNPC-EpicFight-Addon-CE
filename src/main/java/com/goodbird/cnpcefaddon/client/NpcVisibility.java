@@ -34,6 +34,11 @@ public final class NpcVisibility {
         if (!isEfNpcClient(npc)) {
             return false;
         }
+        if (GuiRenderContext.isActive()) {
+            // Availability conditions describe the world, not the editor. Hiding the preview
+            // would leave the NPC-inventory / creation screens empty.
+            return false;
+        }
         if (!CustomNpcs.EnableInvisibleNpcs || CustomNpcs.InvisibilityAlgorithm <= 0) {
             return false;
         }
@@ -56,6 +61,10 @@ public final class NpcVisibility {
 
     public static boolean shouldRenderTranslucent(EntityNPCInterface npc) {
         if (!isEfNpcClient(npc)) {
+            return false;
+        }
+        if (GuiRenderContext.isActive()) {
+            // Always show the real model in editor previews.
             return false;
         }
         if (npc.display.getVisible() != 2) {

@@ -4,6 +4,7 @@ import com.goodbird.cnpcefaddon.common.AddonConfig;
 import com.goodbird.cnpcefaddon.common.AdvNpcPatchReloader;
 import com.goodbird.cnpcefaddon.common.FactionDamageHandler;
 import com.goodbird.cnpcefaddon.common.NpcPatchReloadListener;
+import com.goodbird.cnpcefaddon.common.PlayerStunHandler;
 import com.goodbird.cnpcefaddon.common.network.NetworkHandler;
 import com.goodbird.cnpcefaddon.common.network.SPDatapackSync;
 import net.minecraft.nbt.CompoundTag;
@@ -35,6 +36,7 @@ public class CNPCEpicFightAddon {
         MinecraftForge.EVENT_BUS.addListener(this::reloadListenerEvent);
         MinecraftForge.EVENT_BUS.addListener(this::onDatapackSync);
         MinecraftForge.EVENT_BUS.register(FactionDamageHandler.class);
+        MinecraftForge.EVENT_BUS.register(PlayerStunHandler.class);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AddonConfig.SPEC);
     }
 

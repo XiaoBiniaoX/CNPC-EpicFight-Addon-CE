@@ -2,7 +2,6 @@ package com.goodbird.cnpcefaddon.common;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import yesman.epicfight.api.animation.AnimationManager;
 import yesman.epicfight.api.animation.AnimationManager.AnimationAccessor;
 import yesman.epicfight.api.animation.property.AnimationProperty.PlaybackSpeedModifier;
@@ -20,6 +19,9 @@ import static yesman.epicfight.api.animation.property.AnimationProperty.StaticAn
  * chain-preserve any existing modifier (attack-speed caps from EF / epicfight_extra).
  * Never replace the property outright — that was causing player weapons to ignore
  * attack-speed limits when this addon loaded.
+ * <p>
+ * Speeds are looked up per datapack patch (see {@link PatchKeyResolver}), because all
+ * NPCs share one entity type while each mobpatch declares its own play_speed values.
  */
 public class EntityPlaySpeedManager {
 
@@ -62,12 +64,14 @@ public class EntityPlaySpeedManager {
             if (original == null) {
                 return baseSpeed;
             }
-            ResourceLocation entityType = EntityType.getKey(original.getType());
+            // Keyed by the datapack patch, not the entity type: every NPC shares the
+            // customnpcs:customnpc entity type but may run a different mobpatch.
+            ResourceLocation patchKey = PatchKeyResolver.resolve(original);
             ResourceLocation animKey = resolveAnimKey(self);
-            if (entityType == null || animKey == null) {
+            if (patchKey == null || animKey == null) {
                 return baseSpeed;
             }
-            float cached = PlaySpeedCache.getSpeed(entityType, animKey);
+            float cached = PlaySpeedCache.getSpeed(patchKey, animKey);
             if (cached == 1.0F) {
                 return baseSpeed;
             }

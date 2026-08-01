@@ -1,10 +1,12 @@
 package com.goodbird.cnpcefaddon.common.patch;
 
+import com.goodbird.cnpcefaddon.common.NpcBowDrawFlow;
 import com.goodbird.cnpcefaddon.common.RangedMotionResolver;
 import com.goodbird.cnpcefaddon.common.provider.AdvNpcPatchProvider;
 import com.nameless.indestructible.world.capability.AdvancedCustomHumanoidMobPatch;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import noppes.npcs.entity.EntityNPCInterface;
 import yesman.epicfight.api.animation.LivingMotion;
 import yesman.epicfight.api.utils.math.OpenMatrix4f;
@@ -42,6 +44,25 @@ public class AdvNpcPatch<T extends PathfinderMob> extends AdvancedCustomHumanoid
                 }
                 this.entityDataDefined = true;
             }
+        }
+    }
+
+    /**
+     * Clears a bow draw or crossbow charge left over from a previous session.
+     * <p>
+     * The {@code Charged} tag lives on the held ItemStack and therefore survives saving and
+     * reloading the world, while the transient use-item state does not. An NPC saved
+     * mid-draw came back with a charged crossbow but no active goal, which
+     * {@link com.goodbird.cnpcefaddon.common.NpcBowDrawFlow} then read as "already
+     * charged" -- so it stopped using the item, immediately saw an uncharged weapon on the
+     * next fire, and looped without ever shooting.
+     */
+    @Override
+    public void onJoinWorld(T entityIn, EntityJoinLevelEvent event) {
+        super.onJoinWorld(entityIn, event);
+
+        if (entityIn instanceof EntityNPCInterface npc) {
+            NpcBowDrawFlow.reset(npc);
         }
     }
 
