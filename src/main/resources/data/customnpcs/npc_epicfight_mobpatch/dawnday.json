@@ -1,0 +1,1217 @@
+{
+	"model": "epicfight:entity/biped",
+	"armature": "epicfight:entity/biped",
+	"renderer": "zombie",
+	"isHumanoid": true,
+	"faction": "villager",
+	"attributes": {
+		"impact": 2.0,
+		"armor_negation": 5.0,
+		"max_strikes": 3,
+		"chasing_speed": 1.0,
+		"scale": 1.0,
+		"max_stamina": 85,
+		"stamina_regan_delay": 60,
+		"has_stun_reduction": true,
+		"max_stun_shield": 5,
+		"stun_shield_regen_multiply": 1.2,
+		"stun_shield_regen_delay": 20,
+		"stamina_lose_multiply": 0.5
+	},
+	"default_livingmotions": {
+		"idle": "epicfight:biped/living/idle",
+		"walk": "epicfight:biped/living/walk",
+		"chase": "epicfight:biped/living/run",
+		"death": "epicfight:biped/living/death"
+	},
+	"humanoid_weapon_motions": [
+		{
+			"weapon_categories": ["light_greatsword"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/milady_onehanded_idle",
+				"walk": "epicfight_dd:biped/living/milady_onehanded_walk",
+				"chase": "epicfight_dd:biped/living/milady_onehanded_run"
+			}
+		},
+		{
+			"weapon_categories": ["florett"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/florett_idle",
+				"walk": "epicfight_dd:biped/living/florett_dual_walk",
+				"chase": "epicfight_dd:biped/living/florett_dual_walk"
+			}
+		},
+		{
+			"weapon_categories": ["iron_fist"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/iron_fist_idle",
+				"walk": "epicfight_dd:biped/living/iron_fist_walk",
+				"chase": "epicfight_dd:biped/living/iron_fist_run"
+			}
+		},
+		{
+			"weapon_categories": ["ritus_dagger"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/blood_ritus_dagger_idle",
+				"walk": "epicfight_dd:biped/living/blood_ritus_dagger_idle",
+				"chase": "epicfight_dd:biped/living/blood_ritus_dagger_idle"
+			}
+		},
+		{
+			"weapon_categories": ["spear"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/battlestaff_idle",
+				"walk": "epicfight_dd:biped/living/milady_twohanded_walk",
+				"chase": "epicfight_dd:biped/living/milady_twohanded_walk"
+			}
+		},
+		{
+			"weapon_categories": ["axe"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/sickle_idle",
+				"walk": "epicfight_dd:biped/living/milady_twohanded_walk",
+				"chase": "epicfight_dd:biped/living/milady_twohanded_walk"
+			}
+		},
+		{
+			"weapon_categories": ["dagger"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/knife_onehanded_idle",
+				"walk": "epicfight_dd:biped/living/knife_onehanded_idle",
+				"chase": "epicfight_dd:biped/living/knife_onehanded_idle"
+			}
+		},
+		{
+			"weapon_categories": ["tachi"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/saber_idle",
+				"walk": "epicfight_dd:biped/living/milady_twohanded_walk",
+				"chase": "epicfight_dd:biped/living/milady_twohanded_walk"
+			}
+		},
+		{
+			"weapon_categories": ["longsword"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/hollow_onehanded_idle",
+				"walk": "epicfight_dd:biped/living/hollow_walk",
+				"chase": "epicfight_dd:biped/living/hollow_run"
+			}
+		},
+		{
+			"weapon_categories": ["greatsword"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "epicfight_dd:biped/living/nailbat_idle",
+				"walk": "epicfight_dd:biped/living/saw_idle",
+				"chase": "epicfight_dd:biped/living/saw_idle"
+			}
+		}
+	],
+	"stun_animations": {
+		"short": "epicfight:biped/combat/hit_short",
+		"long": "epicfight:biped/combat/hit_long",
+		"knockdown": "epicfight:biped/combat/knockdown",
+		"fall": "epicfight:biped/living/landing",
+		"neutralize": "epicfight:biped/skill/guard_break1"
+	},
+	"combat_behavior": [
+		{
+			"weapon_categories": ["light_greatsword"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.2}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.2}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_auto5",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 80,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 7.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 50,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.2}
+							],
+							"animation": "epicfight_dd:biped/combat/milady_onehanded_airslash",
+							"play_speed": 1.0,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 35,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 100,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/piercing_fang",
+							"play_speed": 1.0,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["florett"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/florett_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}
+							],
+							"animation": "epicfight_dd:biped/combat/florett_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/florett_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/florett_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 80,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 6.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/florett_dual_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 40,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.2}
+							],
+							"animation": "epicfight_dd:biped/combat/florett_dual_airslash",
+							"play_speed": 1.0,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 30,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 100,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/piercing_strike",
+							"play_speed": 1.0,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["iron_fist"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.4}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_auto5",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 80,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 2.5, "max": 5.5}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 50,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.2}
+							],
+							"animation": "epicfight_dd:biped/combat/iron_fist_airslash",
+							"play_speed": 1.0,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 30,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 100,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/powerful_kick",
+							"play_speed": 1.0,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["ritus_dagger"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/night_ritus_dagger_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.4}
+							],
+							"animation": "epicfight_dd:biped/combat/night_ritus_dagger_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}
+							],
+							"animation": "epicfight_dd:biped/combat/night_ritus_dagger_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/night_ritus_dagger_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 90,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}
+							],
+							"animation": "epicfight_dd:biped/combat/blood_ritus_dagger_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}
+							],
+							"animation": "epicfight_dd:biped/combat/blood_ritus_dagger_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/blood_ritus_dagger_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/blood_ritus_dagger_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 70,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 2.5, "max": 5.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/night_ritus_dagger_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["spear"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/war_sickle_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/war_sickle_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.2}
+							],
+							"animation": "epicfight_dd:biped/combat/war_sickle_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.4}
+							],
+							"animation": "epicfight_dd:biped/combat/war_sickle_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 80,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 6.5}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/halbeard_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 40,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.5}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.2}
+							],
+							"animation": "epicfight_dd:biped/combat/battlestaff_airslash",
+							"play_speed": 1.0,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 30,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 120,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/spearing_strike",
+							"play_speed": 1.0,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 25,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 150,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/skull_rupture",
+							"play_speed": 1.0,
+							"stamina": 12,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["axe"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/steelaxe_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/steelaxe_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.2}
+							],
+							"animation": "epicfight_dd:biped/combat/steelaxe_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.4}
+							],
+							"animation": "epicfight_dd:biped/combat/steelaxe_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 90,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}
+							],
+							"animation": "epicfight_dd:biped/combat/sickle_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}
+							],
+							"animation": "epicfight_dd:biped/combat/sickle_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/sickle_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/sickle_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 50,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 2.5, "max": 5.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/sickle_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 35,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 150,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.5}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/whirlwind",
+							"play_speed": 1.0,
+							"stamina": 12,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["dagger"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/backhand_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.4}
+							],
+							"animation": "epicfight_dd:biped/combat/backhand_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}
+							],
+							"animation": "epicfight_dd:biped/combat/knife_onehanded_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/knife_onehanded_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 70,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 2.5, "max": 5.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/backhand_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 40,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 120,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/impailing_thrust",
+							"play_speed": 1.0,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["tachi"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.6}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/saber_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/saber_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.2}
+							],
+							"animation": "epicfight_dd:biped/combat/saber_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.4}
+							],
+							"animation": "epicfight_dd:biped/combat/saber_auto4",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 80,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 6.5}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/saber_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 40,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 100,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.5}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/wild_strikes",
+							"play_speed": 1.0,
+							"stamina": 10,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["longsword"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.4}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/hollow_onehanded_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}
+							],
+							"animation": "epicfight_dd:biped/combat/hollow_onehanded_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}
+							],
+							"animation": "epicfight_dd:biped/combat/hollow_onehanded_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 60,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 6.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/hollow_ochs_auto2",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 30,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 150,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.5}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/raaahhh",
+							"play_speed": 1.0,
+							"stamina": 12,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"weapon_categories": ["greatsword"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/nailbat_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.2}
+							],
+							"animation": "epicfight_dd:biped/combat/nailbat_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.4}
+							],
+							"animation": "epicfight_dd:biped/combat/saw_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.4}
+							],
+							"animation": "epicfight_dd:biped/combat/saw_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.6}
+							],
+							"animation": "epicfight_dd:biped/combat/greataxe_dual_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.6}
+							],
+							"animation": "epicfight_dd:biped/combat/greataxe_dual_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 70,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 7.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "epicfight_dd:biped/combat/greataxe_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 40,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}, {"predicate":"random_chance", "chance": 0.2}
+							],
+							"animation": "epicfight_dd:biped/combat/nailbat_airslash",
+							"play_speed": 1.0,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 30,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 150,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "epicfight_dd:biped/skill/annihilate",
+							"play_speed": 1.0,
+							"stamina": 12,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		}
+	]
+}

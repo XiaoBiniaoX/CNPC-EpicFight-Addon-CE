@@ -1,0 +1,178 @@
+﻿{
+	"model": "epicfight:entity/biped",
+	"armature": "epicfight:entity/biped",
+	"renderer": "player",
+	"isHumanoid": true,
+	"faction": "villager",
+	"attributes": {
+		"impact": 2.0,
+		"armor_negation": 5.0,
+		"max_strikes": 3,
+		"chasing_speed": 1.0,
+		"scale": 1.0,
+		"max_stamina": 85,
+		"stamina_regan_delay": 60,
+		"has_stun_reduction": true,
+		"max_stun_shield": 5,
+		"stun_shield_regen_multiply": 1.2,
+		"stun_shield_regen_delay": 20,
+		"stamina_lose_multiply": 0.5
+	},
+	"default_livingmotions": {
+		"idle": "epicfight:biped/living/idle",
+		"walk": "epicfight:biped/living/walk",
+		"chase": "epicfight:biped/living/run",
+		"death": "epicfight:biped/living/death"
+	},
+	"humanoid_weapon_motions": [
+		{
+			"weapon_categories": ["rapier", "ender_rapier", "ocean_rapier", "wither_rapier", "amethyst_rapier"],
+			"style": "common",
+			"livingmotions": {
+				"idle": "refm:biped/living/hold_rapier",
+				"walk": "refm:biped/living/walk_rapier",
+				"run": "refm:biped/living/run_rapier",
+				"chase": "refm:biped/living/run_rapier"
+			}
+		}
+	],
+	"stun_animations": {
+		"short": "epicfight:biped/combat/hit_short",
+		"long": "epicfight:biped/combat/hit_long",
+		"knockdown": "epicfight:biped/combat/knockdown",
+		"fall": "epicfight:biped/living/landing",
+		"neutralize": "epicfight:biped/skill/guard_break1"
+	},
+	"combat_behavior": [
+		{
+			"weapon_categories": ["rapier", "ender_rapier", "ocean_rapier", "wither_rapier", "amethyst_rapier"],
+			"style": "common",
+			"behavior_series": [
+				{
+					"weight": 120,
+					"canBeInterrupted": true,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "refm:biped/combat/rapier_auto1",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.8}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "refm:biped/combat/rapier_auto2",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						},
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "refm:biped/combat/rapier_auto3",
+							"play_speed": 1.0,
+							"stamina": 4,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 80,
+					"canBeInterrupted": false,
+					"looping": true,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 3.0, "max": 7.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}
+							],
+							"animation": "refm:biped/combat/rapier_dash",
+							"play_speed": 0.9,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 50,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.2}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.2}
+							],
+							"animation": "refm:biped/combat/rapier_airslash",
+							"play_speed": 1.0,
+							"stamina": 6,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 30,
+					"canBeInterrupted": false,
+					"looping": false,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "refm:biped/skill/guard_rapier_parry",
+							"play_speed": 1.0,
+							"stamina": 8,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 15,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 200,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 3.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.4}
+							],
+							"animation": "refm:biped/skill/rapier_backflip_first",
+							"play_speed": 1.0,
+							"stamina": 12,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				},
+				{
+					"weight": 15,
+					"canBeInterrupted": false,
+					"looping": false,
+					"cooldown": 200,
+					"behaviors": [
+						{
+							"conditions": [
+								{"predicate":"within_eye_height"}, {"predicate":"within_distance", "min": 0.0, "max": 4.0}, {"predicate":"within_angle_horizontal", "min": -30.0, "max": 30.0}, {"predicate":"random_chance", "chance": 0.3}
+							],
+							"animation": "refm:biped/skill/rapier_backflip_second",
+							"play_speed": 1.0,
+							"stamina": 14,
+							"convert_time": 0,
+							"set_phase": 1
+						}
+					]
+				}
+			]
+		}
+	]
+}
