@@ -6,6 +6,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
@@ -15,7 +16,10 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import noppes.npcs.CustomEntities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import top.bincnpcef.common.AddonConfig;
+import top.bincnpcef.common.FactionDamageHandler;
 import top.bincnpcef.common.NpcPatchReloadListener;
+import top.bincnpcef.common.PlayerStunHandler;
 import top.bincnpcef.common.network.NetworkHandler;
 import top.bincnpcef.common.network.SPDatapackSync;
 import yesman.epicfight.registry.entries.EpicFightAttributes;
@@ -26,6 +30,8 @@ public class CnpcefAddon {
     private static final Logger LOGGER = LoggerFactory.getLogger(CnpcefAddon.class);
 
     public CnpcefAddon(IEventBus modEventBus, ModContainer modContainer) {
+        // 配置文件（TOML，中英注释）
+        modContainer.registerConfig(ModConfig.Type.COMMON, AddonConfig.SPEC);
         // MOD 事件总线：注册网络 payload
         modEventBus.addListener(this::registerPayloadHandlers);
         // MOD 事件总线：为 CNPC 注册 EF 属性（修复攻击 EF 能力 NPC 时 "Can't find attribute epicfight:weight" 崩溃）
@@ -33,6 +39,10 @@ public class CnpcefAddon {
         // 游戏事件总线：注册数据包重载监听器和数据包同步事件
         NeoForge.EVENT_BUS.addListener(this::addReloadListener);
         NeoForge.EVENT_BUS.addListener(this::onDatapackSync);
+        // 阵营保护（玩家侧）
+        NeoForge.EVENT_BUS.addListener(FactionDamageHandler::onLivingAttack);
+        // NPC 攻击玩家的僵直处理（EF 事件钩子）
+        PlayerStunHandler.init();
     }
 
     private void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {

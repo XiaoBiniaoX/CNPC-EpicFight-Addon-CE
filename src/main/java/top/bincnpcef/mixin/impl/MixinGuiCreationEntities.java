@@ -24,6 +24,13 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
         super(null);
     }
 
+    /**
+     * EF 配置行的垂直偏移：旋转滑块在 guiTop+210（GuiCreationScreenInterface L106，x=282），
+     * 按钮放在滑块正上方 guiTop+190，即 NPC 展示底部、滑条之上（1.20.1 同款布局，不与
+     * "Reset To NPC"(guiTop+46) 及右上角其它附属 mod 冲突）。
+     */
+    private static final int EF_ROW_Y = 190;
+
     @Inject(method = "init", at = @At("TAIL"))
     private void cnpcef$init(CallbackInfo ci) {
         List<String> list = new ArrayList<>();
@@ -34,8 +41,11 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
         if (((IDataDisplay) npc.display).cnpcef$hasEFModel()) {
             curName = ((IDataDisplay) npc.display).cnpcef$getEFModel().toString();
         }
-        addLabel(new GuiLabel(312, "EpicFight Config:", this.guiLeft + 124, this.guiTop + 24, 0xffffff));
-        this.addButton(new GuiButtonNop(this, 302, this.guiLeft + 230, this.guiTop + 22, 150, 20, curName, (b) -> {
+        // 与下方旋转滑块同列（x=284）；label 放在滚动列表(x<=120)与滑块之间的空隙。
+        int buttonX = this.guiLeft + this.xOffset + 142;
+        int labelX = this.guiLeft + 130;
+        addLabel(new GuiLabel(312, "EF Config:", labelX, this.guiTop + EF_ROW_Y + 6, 0xffffff));
+        this.addButton(new GuiButtonNop(this, 302, buttonX, this.guiTop + EF_ROW_Y, 120, 20, curName, (b) -> {
             setSubGui(new EfModelSelectionScreen(this, "Selecting epicfight config:", list, name -> {
                 ((IDataDisplay) npc.display).cnpcef$setEFModel(ResourceLocation.parse(name));
                 getButton(302).setDisplayText(name);

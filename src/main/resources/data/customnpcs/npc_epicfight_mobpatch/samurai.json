@@ -51,7 +51,7 @@
 	},
 	"combat_behavior": [
 		{
-			"weapon_categories": ["sword","longsword","tachi","uchigatana"],
+			"weapon_categories": ["axe", "hoe", "pickaxe", "shovel", "sword", "longsword", "tachi", "uchigatana"],
 			"style": "common",
 			"behavior_series": [
 				{

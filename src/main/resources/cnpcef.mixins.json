@@ -8,8 +8,11 @@
     "IAttachmentEntityPatchProvider",
     "impl.MixinDataDisplay",
     "impl.MixinEntityNpcInterface",
+    "impl.MixinEntityAIRangedAttack",
     "impl.MixinLivingEntityHurt",
     "impl.MixinCustomHumanoidMobPatch",
+    "impl.MixinAnimatedAttackGoal",
+    "impl.MixinLivingEntityPatchDamage",
     "impl.ICustomMobPatchProvider",
     "impl.ICustomHumanoidMobPatchProvider"
   ],
