@@ -6,6 +6,9 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import noppes.npcs.entity.EntityNPCInterface;
+import noppes.npcs.api.item.IItemStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Drives a real item-use cycle for NPCs holding a bow or crossbow, so Epic Fight's draw
@@ -28,8 +31,24 @@ import noppes.npcs.entity.EntityNPCInterface;
  */
 public final class NpcBowDrawFlow {
 
-    /** Vanilla skeletons draw for 20 ticks; matching that keeps the pose readable. */
-    private static final int BOW_DRAW_TICKS = 20;
+    private static final Logger LOGGER = LoggerFactory.getLogger(NpcBowDrawFlow.class);
+
+    /**
+     * Draw / charge duration for bows, derived from the NPC's native ranged attack speed
+     * ({@code rangedAttackTime = getDelayMin()/2}) so the visual draw phase scales with
+     * the configured fire rate.
+     * <p>
+     * The crossbow charge does NOT scale: the reload animation needs its full vanilla
+     * length to be visible. Adaptive timing made the charge finish in a few ticks and the
+     * NPC sat in Epic Fight's bow-aim pose instead of the crossbow reload animation.
+     */
+    private static int drawDuration(EntityNPCInterface npc) {
+        int delayMin = npc.stats.ranged.getDelayMin();
+        return Math.max(delayMin / 2, 1);
+    }
+
+    /** Vanilla crossbow charge duration, fixed so the reload animation plays fully. */
+    private static final int CROSSBOW_CHARGE_TICKS = 25;
 
     private static final String TAG_CHARGED = "Charged";
     private static final String TAG_CHARGED_PROJECTILES = "ChargedProjectiles";
@@ -62,29 +81,40 @@ public final class NpcBowDrawFlow {
             tickCrossbow(npc, mainHand);
         } else if (!npc.isUsingItem()) {
             npc.startUsingItem(InteractionHand.MAIN_HAND);
+            log(npc, "bow draw start, ticksUsing=" + npc.getTicksUsingItem());
         }
     }
 
     private static void tickCrossbow(EntityNPCInterface npc, ItemStack crossbow) {
         if (CrossbowItem.isCharged(crossbow)) {
             // Charged: leave the use state so the AIM pose (driven by isCharged) shows.
+            if (npc.isUsingItem()) {
+                log(npc, "charged while using -> stopUsing");
+            }
             stopUsing(npc);
             return;
         }
 
         if (!npc.isUsingItem()) {
             npc.startUsingItem(InteractionHand.MAIN_HAND);
+            log(npc, "crossbow charge start, ticksUsing=" + npc.getTicksUsingItem() + ", drawDuration=" + drawDuration(npc));
             return;
         }
 
-        if (npc.getTicksUsingItem() >= CrossbowItem.getChargeDuration(crossbow)) {
+        if (npc.getTicksUsingItem() >= CROSSBOW_CHARGE_TICKS) {
             setCharged(crossbow, true);
             stopUsing(npc);
+            log(npc, "crossbow CHARGE COMPLETE at ticksUsing=" + npc.getTicksUsingItem());
         }
     }
 
     /**
      * @return whether the draw / charge has progressed far enough to let the shot through
+     * <p>
+     * The draw phase is only a visual gate: once the use state is active the shot passes,
+     * so the real fire rate stays exactly what Custom NPCs computes
+     * ({@code rangedAttackTime} = {@code delayMin/2} initially, then the burst delay and the
+     * randomised {@code delayMin}..{@code delayMax} interval).
      */
     public static boolean readyToFire(EntityNPCInterface npc) {
         if (npc == null) {
@@ -98,10 +128,53 @@ public final class NpcBowDrawFlow {
         }
 
         if (mainHand.getItem() instanceof CrossbowItem) {
-            return CrossbowItem.isCharged(mainHand);
+            return CrossbowItem.isCharged(mainHand) || npc.isUsingItem();
         }
 
-        return npc.isUsingItem() && npc.getTicksUsingItem() >= BOW_DRAW_TICKS;
+        return npc.isUsingItem();
+    }
+
+    /**
+     * Keeps a crossbow in the NPC's main hand charged at all times while ammo is available,
+     * even when no target exists, so the first shot at an incoming enemy fires immediately
+     * instead of starting the charge phase from zero.
+     * <p>
+     * Driven from the NPC's own tick (not the ranged goal), so it also covers the moments
+     * between two bursts. It only starts the use cycle and never consumes the shot itself;
+     * {@link #tickDraw} still owns the release on the goal side.
+     */
+    public static void tickKeepLoaded(EntityNPCInterface npc) {
+        if (npc == null || npc.level().isClientSide()) {
+            return;
+        }
+
+        ItemStack mainHand = npc.getMainHandItem();
+
+        if (!(mainHand.getItem() instanceof CrossbowItem)) {
+            return;
+        }
+
+        if (CrossbowItem.isCharged(mainHand)) {
+            return;
+        }
+
+        IItemStack projectile = npc.inventory.getProjectile();
+
+        if (projectile == null || projectile.isEmpty()) {
+            return;
+        }
+
+        if (!npc.isUsingItem()) {
+            npc.startUsingItem(InteractionHand.MAIN_HAND);
+            log(npc, "keepLoaded charge start, ticksUsing=" + npc.getTicksUsingItem());
+            return;
+        }
+
+        if (npc.getTicksUsingItem() >= CROSSBOW_CHARGE_TICKS) {
+            setCharged(mainHand, true);
+            stopUsing(npc);
+            log(npc, "keepLoaded CHARGE COMPLETE at ticksUsing=" + npc.getTicksUsingItem());
+        }
     }
 
     /**
@@ -120,6 +193,7 @@ public final class NpcBowDrawFlow {
 
         if (mainHand.getItem() instanceof CrossbowItem) {
             setCharged(mainHand, false);
+            log(npc, "onFired: cleared charge");
         }
 
         stopUsing(npc);
@@ -134,6 +208,7 @@ public final class NpcBowDrawFlow {
 
         if (mainHand.getItem() instanceof CrossbowItem) {
             setCharged(mainHand, false);
+            log(npc, "reset: cleared charge");
         }
 
         stopUsing(npc);
@@ -142,7 +217,12 @@ public final class NpcBowDrawFlow {
     private static void stopUsing(EntityNPCInterface npc) {
         if (npc.isUsingItem()) {
             npc.stopUsingItem();
+            log(npc, "stopUsingItem");
         }
+    }
+
+    private static void log(EntityNPCInterface npc, String message) {
+        LOGGER.info("[bowflow] npc={} tick={} {}", npc.getName().getString(), npc.tickCount, message);
     }
 
     /**

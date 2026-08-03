@@ -65,8 +65,42 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
      */
     private static final Set<ResourceLocation> OWNED_KEYS = new HashSet<>();
 
+    static {
+        // Custom weapon categories / styles from optional addon mods (e.g. the
+        // Dawnday's DawnDayWeaponCategories, epicfightx's EFXStyles and EFN mod's
+        // EFNWeaponCategories/EFNStyles) only call ENUM_MANAGER.assign()
+        // when their enum class is first loaded. Those mods never register them with
+        // registerEnumCls(), and loadEnum() only walks registered classes, so at
+        // datapack-parse time the manager has no entry: get("efn_yamato") returns
+        // null and every named category silently collapses onto the null key (NPCS
+        // then fall back to the idle-only default). Force the class initialisation
+        // before any mobpatch file is deserialised so the enum keys resolve.
+        ensureExtendableEnumsLoaded();
+    }
+
+    private static void ensureExtendableEnumsLoaded() {
+        String[] fqcns = {
+            "com.hm.efn.gameasset.EFNWeaponCategories",
+            "com.hm.efn.gameasset.EFNStyles",
+            "net.epicfight_dd.world.capabilities.item.DawnDayWeaponCategories",
+            "com.asanginxst.epicfightx.gameassets.EFXStyles"
+        };
+        for (String fqcn : fqcns) {
+            try {
+                Class.forName(fqcn);
+                LOGGER.info("Pre-loaded extendable enum class {}", fqcn);
+            } catch (ClassNotFoundException ignored) {
+                // mod not present - the associated datapack is not in use either
+            }
+        }
+    }
+
     protected void apply(Map<ResourceLocation, JsonElement> objectIn, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
         LOGGER.info("AdvNpcPatchReloader.apply() start - objectIn size: {}", objectIn.size());
+
+        // The bow draw / crossbow charge animations are shared globals; the slowdown
+        // modifier goes on once per reload (idempotent) so NPC draws match their fire rate.
+        EntityPlaySpeedManager.ensureRangedDrawModifiers();
 
         List<Pair<ResLocPredicate, MobPatchReloadListener.AbstractMobPatchProvider>> tempProviders = Lists.newArrayList();
         Set<ResourceLocation> tempModels = new HashSet<>();
@@ -157,7 +191,8 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
 
     public static AdvNpcPatchProvider deserializeMobPatchProvider(ResourceManager resourceManagerIn, CompoundTag tag, boolean clientSide) {
         AdvNpcPatchProvider provider = new AdvNpcPatchProvider();
-        provider.setAttributeValues(AdvancedMobpatchReloader.deserializeAdvancedAttributes(tag.getCompound("attributes")));
+        CompoundTag attributes = withTopLevelImpact(tag);
+        provider.setAttributeValues(AdvancedMobpatchReloader.deserializeAdvancedAttributes(attributes));
         ResourceLocation modelLocation = ResourceLocation.parse(tag.getString("model"));
         ResourceLocation armatureLocation = ResourceLocation.parse(tag.getString("armature"));
         if (EpicFightSharedConstants.isPhysicalClient()) {
@@ -197,6 +232,23 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         }
 
         return provider;
+    }
+
+    /**
+     * The epicfight data packs written for this addon put {@code impact} at the top level of
+     * the mobpatch file, but both Epic Fight and Indestructible only read it from inside the
+     * {@code attributes} block. Without this merge the value never reaches the entity's
+     * {@code EpicFightAttributes.IMPACT}, so knockback stayed constant no matter what was set.
+     */
+    private static CompoundTag withTopLevelImpact(CompoundTag tag) {
+        CompoundTag attributes = tag.getCompound("attributes");
+
+        if (!attributes.contains("impact") && tag.contains("impact")) {
+            attributes = attributes.copy();
+            attributes.putDouble("impact", tag.getDouble("impact"));
+        }
+
+        return attributes;
     }
 
     private static List<LivingEntityPatchEvent.StunEvent> deserializeStunCommandList(ListTag args) {

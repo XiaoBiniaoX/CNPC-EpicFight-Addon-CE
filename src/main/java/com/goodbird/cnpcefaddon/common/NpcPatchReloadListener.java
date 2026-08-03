@@ -58,6 +58,10 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.util.GsonHelper;
+import yesman.epicfight.api.animation.AnimationManager;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
     private static final Gson GSON = (new GsonBuilder()).create();
@@ -98,6 +102,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             }
             if (tag != null) {
                 try {
+                    validateAnimationReferences(entry.getKey(), tag);
                     PlaySpeedCache.parseAndRegister(entry.getKey(), tag);
                     MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
                     CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
@@ -189,7 +194,8 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
 
         MobPatchReloadListener.AbstractMobPatchProvider provider = humanoid ? new NpcHumanoidPatchProvider() : new NpcPatchProvider();
         final ICustomMobPatchProvider npcPatchProvider = (ICustomMobPatchProvider) provider;
-        npcPatchProvider.setAttributeValues(MobPatchReloadListener.deserializeAttributes(tag.getCompound("attributes")));
+        CompoundTag attributes = withTopLevelImpact(tag);
+        npcPatchProvider.setAttributeValues(MobPatchReloadListener.deserializeAttributes(attributes));
         ResourceLocation modelLocation = ResourceLocation.parse(tag.getString("model"));
         ResourceLocation armatureLocation = ResourceLocation.parse(tag.getString("armature"));
         if (EpicFightSharedConstants.isPhysicalClient()) {
@@ -222,8 +228,106 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         return provider;
     }
 
+    /**
+     * The epicfight data packs written for this addon put {@code impact} at the top level of
+     * the mobpatch file, but both Epic Fight and Indestructible only read it from inside the
+     * {@code attributes} block. Without this merge the value never reaches the entity's
+     * {@code EpicFightAttributes.IMPACT}, so knockback stayed constant no matter what was set.
+     */
+    private static CompoundTag withTopLevelImpact(CompoundTag tag) {
+        CompoundTag attributes = tag.getCompound("attributes");
+
+        if (!attributes.contains("impact") && tag.contains("impact")) {
+            attributes = attributes.copy();
+            attributes.putDouble("impact", tag.getDouble("impact"));
+        }
+
+        return attributes;
+    }
+
     public static Stream<CompoundTag> getDataStream() {
         return TAGMAP.values().stream();
+    }
+
+    /**
+     * Validates that every animation referenced by the mobpatch JSON actually exists in the
+     * loaded animation registry. A pack written against EpicFight-Extra keeps working when
+     * that mod is removed; without this check the NPC later tries to play a missing
+     * animation and crashes the game.
+     * <p>
+     * Skipped when the animation registry has not been loaded yet (it would report every
+     * animation as missing and reject every pack).
+     */
+    private static void validateAnimationReferences(ResourceLocation key, CompoundTag tag) {
+        java.util.Map<ResourceLocation, ?> table = AnimationManager.getInstance().getAnimations(a -> true);
+
+        if (table == null || table.isEmpty()) {
+            LOGGER.info("Animation registry not loaded yet, skipping animation validation for {}", key);
+            return;
+        }
+
+        List<String> missing = new ArrayList<>();
+        collectMissingAnimations(table, tag, missing);
+
+        if (!missing.isEmpty()) {
+            throw new RuntimeException("引用的动画不存在（可能依赖未安装的 mod，如 EpicFight-Extra）: " + String.join(", ", missing));
+        }
+    }
+
+    private static void collectMissingAnimations(Map<ResourceLocation, ?> table, CompoundTag tag, List<String> missing) {
+        if (tag.contains("default_livingmotions")) {
+            CompoundTag lm = tag.getCompound("default_livingmotions");
+
+            for (String motion : lm.getAllKeys()) {
+                String anim = lm.getString(motion);
+
+                if (!anim.isEmpty() && !animationExists(table, anim)) {
+                    missing.add("default_livingmotions." + motion + "=" + anim);
+                }
+            }
+        }
+
+        if (tag.contains("combat_behavior")) {
+            net.minecraft.nbt.ListTag list = tag.getList("combat_behavior", 10);
+
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag behavior = list.getCompound(i);
+
+                if (!behavior.contains("animations")) {
+                    continue;
+                }
+
+                collectStrings(table, behavior.getCompound("animations"), "combat_behavior[" + i + "].animations", missing);
+            }
+        }
+    }
+
+    private static void collectStrings(Map<ResourceLocation, ?> table, CompoundTag tag, String path, List<String> missing) {
+        for (String key : tag.getAllKeys()) {
+            String childPath = path + "." + key;
+
+            if (tag.contains(key, 8)) {
+                String anim = tag.getString(key);
+
+                if (!anim.isEmpty() && !animationExists(table, anim)) {
+                    missing.add(childPath + "=" + anim);
+                }
+            } else if (tag.contains(key, 10)) {
+                collectStrings(table, tag.getCompound(key), childPath, missing);
+            }
+        }
+    }
+
+    private static boolean animationExists(Map<ResourceLocation, ?> table, String anim) {
+        ResourceLocation id = ResourceLocation.tryParse(anim);
+
+        if (id == null) {
+            return false;
+        }
+
+        return table.containsKey(id)
+                || table.containsKey(AnimationManager.idToPath(id))
+                || table.containsKey(AnimationManager.pathToId(id));
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -249,6 +353,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                 } else {
                     PlaySpeedCache.parseAndRegister(key, tag);
                 }
+                validateAnimationReferences(key, tag);
                 boolean disabled = tag.contains("disabled") && tag.getBoolean("disabled");
                 MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, true, Minecraft.getInstance().getResourceManager());
                 if (!disabled) {

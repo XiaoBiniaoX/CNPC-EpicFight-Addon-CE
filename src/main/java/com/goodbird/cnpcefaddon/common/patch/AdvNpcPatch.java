@@ -6,8 +6,11 @@ import com.goodbird.cnpcefaddon.common.provider.AdvNpcPatchProvider;
 import com.nameless.indestructible.world.capability.AdvancedCustomHumanoidMobPatch;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import noppes.npcs.entity.EntityNPCInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import yesman.epicfight.api.animation.LivingMotion;
 import yesman.epicfight.api.utils.math.OpenMatrix4f;
 import yesman.epicfight.main.EpicFightSharedConstants;
@@ -20,6 +23,7 @@ import yesman.epicfight.world.entity.ai.goal.CombatBehaviors;
 import java.util.Map;
 
 public class AdvNpcPatch<T extends PathfinderMob> extends AdvancedCustomHumanoidMobPatch<T> implements INpcPatch {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AdvNpcPatch.class);
     AdvNpcPatchProvider provider;
     private boolean entityDataDefined;
 
@@ -84,6 +88,14 @@ public class AdvNpcPatch<T extends PathfinderMob> extends AdvancedCustomHumanoid
 
         CapabilityItem itemCap = this.getHoldingItemCapability(InteractionHand.MAIN_HAND);
         boolean armed = itemCap != null && !itemCap.isEmpty();
+
+        ItemStack mainHand = this.getOriginal().getItemInHand(InteractionHand.MAIN_HAND);
+        LOGGER.debug("[advmobpatch] held={} armed={} capCategory={} capStyle={} bookedCategories={}",
+            mainHand.isEmpty() ? "EMPTY" : mainHand.getItem().getDescriptionId(),
+            armed,
+            itemCap == null ? "NULL" : itemCap.getWeaponCategory(),
+            (itemCap == null || !armed) ? "N/A" : itemCap.getStyle(this),
+            this.weaponAttackMotions.keySet());
 
         Map<Style, CombatBehaviors.Builder<HumanoidMobPatch<?>>> byStyle = armed
                 ? this.weaponAttackMotions.get(itemCap.getWeaponCategory())

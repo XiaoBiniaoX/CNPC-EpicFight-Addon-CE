@@ -23,4 +23,10 @@ public interface IBehaviorSeriesPointer {
 
     @Accessor("weight")
     float cnpcef$getWeight();
+
+    @Accessor("cooldown")
+    int cnpcef$getCooldown();
+
+    @Accessor("cooldown")
+    void cnpcef$setCooldown(int cooldown);
 }

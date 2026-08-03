@@ -27,13 +27,20 @@ import yesman.epicfight.world.capabilities.entitypatch.MobPatch;
  * {@code guard_time}. Guarding still works and still absorbs hits; it just cannot be extended
  * without limit. Datapacks asking for a shorter guard are unaffected, since the original
  * end condition still applies first.
+ * <p>
+ * On cap, the {@code blocking} flag is dropped and {@code interrupted} is raised. The latter
+ * makes {@code AdvancedCombatGoal} reset its current behavior series on its next tick, so the
+ * guard move Indestructible is still executing does not leave the combat goal stuck in the
+ * "activated move" branch -- the NPC picks a fresh move instead. Interrupted is only ever
+ * raised here while the NPC is actually blocking, so normal attack series are unaffected, and
+ * {@code AdvancedCombatGoal} clears the flag itself after handling it.
  */
 @Mixin(GuardGoal.class)
 public abstract class MixinGuardGoal {
 
-    /** Two seconds: long enough to read as a deliberate block, short enough not to stall. */
+    /** 0.75 seconds: a deliberate block, without stalling the fight. */
     @Unique
-    private static final int MAX_BLOCK_TICKS = 40;
+    private static final int MAX_BLOCK_TICKS = 15;
 
     @Shadow(remap = false)
     private MobPatch<?> mobPatch;
@@ -64,10 +71,13 @@ public abstract class MixinGuardGoal {
             return;
         }
 
-        // Drop the flag now so AdvancedCombatGoal can act on this very tick; stop() would
-        // otherwise only run after the goal selector re-evaluates.
         if (this.mobPatch instanceof IAdvancedCapability capability) {
+            // Drop the flag now so AdvancedCombatGoal can act on this very tick; stop() would
+            // otherwise only run after the goal selector re-evaluates.
             capability.setBlocking(false);
+            // Force the combat goal to reset its series: its active guard move would otherwise
+            // keep AdvancedCombatGoal in the "activated move" branch, which picks no new move.
+            capability.setInterrupted(true);
         }
     }
 }

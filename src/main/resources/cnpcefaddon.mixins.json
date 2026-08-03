@@ -21,13 +21,17 @@
     "MixinEntityLivingWrapper",
     "MixinEntityNpcInterface",
     "MixinEntityAIRangedAttack",
+    "MixinEntityAIAttackTarget",
     "MixinEntityNPCInvisible",
+    "MixinDataMelee",
     "MixinGuardGoal",
     "MixinLivingEntityHurt",
     "MixinLinkAnimation",
     "MixinLivingEntityPatchDamage",
+    "MixinLivingEntityPatchPlaySync",
     "MixinLivingEntityPatchStun",
-    "MixinNPCWrapper"
+    "MixinNPCWrapper",
+    "MixinServerAnimator"
   ],
   "client": [
     "IMixinRenderEngine",
@@ -41,6 +45,7 @@
     "MixinRenderEngine",
     "MixinRenderEngineEvents",
     "MixinSkinnedMeshDraw",
+    "MixinGuiNpcStats",
     "MixinTargetIndicator"
   ],
   "minVersion": "0.8"

@@ -1,6 +1,7 @@
 package com.goodbird.cnpcefaddon.mixin.impl;
 
 import com.goodbird.cnpcefaddon.common.AddonConfig;
+import com.goodbird.cnpcefaddon.common.NpcBowDrawFlow;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -22,6 +23,11 @@ public class MixinEntityNpcInterface extends PathfinderMob {
 
     protected MixinEntityNpcInterface(EntityType<? extends PathfinderMob> p_21683_, Level p_21684_) {
         super(p_21683_, p_21684_);
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void cnpcef$keepCrossbowLoaded(CallbackInfo ci) {
+        NpcBowDrawFlow.tickKeepLoaded((EntityNPCInterface) (Object) this);
     }
 
     @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)
