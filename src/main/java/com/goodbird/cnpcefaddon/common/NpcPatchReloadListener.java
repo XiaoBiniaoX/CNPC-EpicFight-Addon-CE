@@ -1,0 +1,383 @@
+package com.goodbird.cnpcefaddon.common;
+
+import com.goodbird.cnpcefaddon.client.render.RenderStorage;
+import com.goodbird.cnpcefaddon.common.network.SPDatapackSync;
+import com.goodbird.cnpcefaddon.common.patch.INpcPatch;
+import com.goodbird.cnpcefaddon.common.provider.INpcPatchProvider;
+import com.goodbird.cnpcefaddon.common.provider.NpcBranchPatchProvider;
+import com.goodbird.cnpcefaddon.common.provider.NpcHumanoidPatchProvider;
+import com.goodbird.cnpcefaddon.common.provider.NpcPatchProvider;
+import com.goodbird.cnpcefaddon.mixin.impl.ICustomHumanoidMobPatchProvider;
+import com.goodbird.cnpcefaddon.mixin.impl.ICustomMobPatchProvider;
+import com.google.common.collect.Maps;
+import net.minecraft.network.chat.Component;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import net.minecraft.client.Minecraft;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.Entity;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.registries.ForgeRegistries;
+import noppes.npcs.CustomEntities;
+import yesman.epicfight.api.asset.AssetAccessor;
+import yesman.epicfight.api.client.model.Meshes;
+import yesman.epicfight.api.client.model.SkinnedMesh;
+import yesman.epicfight.api.data.reloader.MobPatchReloadListener;
+import yesman.epicfight.api.model.Armature;
+import yesman.epicfight.client.mesh.HumanoidMesh;
+import yesman.epicfight.client.renderer.patched.entity.PatchedEntityRenderer;
+import yesman.epicfight.gameasset.Armatures;
+import yesman.epicfight.main.EpicFightMod;
+import yesman.epicfight.main.EpicFightSharedConstants;
+import yesman.epicfight.particle.HitParticleType;
+import yesman.epicfight.world.capabilities.entitypatch.EntityPatch;
+import yesman.epicfight.world.capabilities.entitypatch.Faction;
+import yesman.epicfight.world.capabilities.provider.EntityPatchProvider;
+
+import java.io.Reader;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.util.GsonHelper;
+import yesman.epicfight.api.animation.AnimationManager;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
+    private static final Gson GSON = (new GsonBuilder()).create();
+    private static final Logger LOGGER = LoggerFactory.getLogger(NpcPatchReloadListener.class);
+
+    public static final NpcBranchPatchProvider branchPatchProvider = new NpcBranchPatchProvider();
+    public static final Set<ResourceLocation> AVAILABLE_MODELS = new HashSet<>();
+    public static final Map<ResourceLocation, CompoundTag> TAGMAP = Maps.newHashMap();
+    public static final Map<ResourceLocation, String> loadErrors = new HashMap<>();
+
+    public NpcPatchReloadListener() {
+        super(GSON, "npc_epicfight_mobpatch");
+    }
+
+    protected void apply(Map<ResourceLocation, JsonElement> objectIn, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
+
+        NpcBranchPatchProvider tempProvider = new NpcBranchPatchProvider();
+        Set<ResourceLocation> tempModels = new HashSet<>();
+        Map<ResourceLocation, CompoundTag> tempTags = new HashMap<>();
+        Map<ResourceLocation, PatchedEntityRenderer> oldRenderers = null;
+        if (EpicFightSharedConstants.isPhysicalClient()) {
+            oldRenderers = RenderStorage.renderersMap;
+            RenderStorage.renderersMap = new HashMap<>();
+        }
+
+        // Full wipe is safe here: this listener runs before AdvNpcPatchReloader, which
+        // re-registers its own patches right after. parseAndRegister() also clears per key.
+        PlaySpeedCache.clear();
+
+        for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
+            CompoundTag tag = null;
+            try {
+                tag = TagParser.parseTag((entry.getValue()).toString());
+            } catch (CommandSyntaxException e) {
+                LOGGER.error("Failed to parse NPC EpicFight mobpatch data for {}: {}", entry.getKey(), e.getMessage());
+                loadErrors.put(entry.getKey(), e.getMessage());
+            }
+            if (tag != null) {
+                try {
+                    validateAnimationReferences(entry.getKey(), tag);
+                    PlaySpeedCache.parseAndRegister(entry.getKey(), tag);
+                    MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
+                    CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
+                    filteredTag.putString("patchType", "NORMAL");
+                    filteredTag.putString("id", entry.getKey().toString());
+                    // filterClientData drops combat_behavior, so ship the parsed play_speed
+                    // values separately or remote clients animate at the wrong rate.
+                    filteredTag.put("cnpcefPlaySpeeds", PlaySpeedCache.writeSpeeds(entry.getKey()));
+                    if (EpicFightSharedConstants.isPhysicalClient())
+                        RenderStorage.registerRenderer(entry.getKey(), tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
+                    tempProvider.addProvider(entry.getKey(), provider);
+                    tempModels.add(entry.getKey());
+                    tempTags.put(entry.getKey(), filteredTag);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to load NPC EpicFight mobpatch for {}: {}", entry.getKey(), e.getMessage());
+                    loadErrors.put(entry.getKey(), e.getMessage());
+                }
+            }
+        }
+
+        Set<ResourceLocation> builtinKeys = Set.of(
+            ResourceLocation.parse("customnpcs:customnpc"),
+            ResourceLocation.parse("customnpcs:customnpc_alex"),
+            ResourceLocation.parse("customnpcs:skeleton")
+        );
+        for (ResourceLocation key : builtinKeys) {
+            if (!tempModels.contains(key)) {
+                try {
+                    ResourceLocation filePath = ResourceLocation.fromNamespaceAndPath(
+                        key.getNamespace(), "npc_epicfight_mobpatch/" + key.getPath() + ".json");
+                    List<Resource> stack = resourceManagerIn.getResourceStack(filePath);
+                    for (int i = stack.size() - 1; i >= 0; i--) {
+                        try (Reader reader = stack.get(i).openAsReader()) {
+                            JsonElement element = GsonHelper.fromJson(GSON, reader, JsonElement.class);
+                            CompoundTag tag = TagParser.parseTag(element.toString());
+                            PlaySpeedCache.parseAndRegister(key, tag);
+                            MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
+                            CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
+                            filteredTag.putString("patchType", "NORMAL");
+                            filteredTag.putString("id", key.toString());
+                            filteredTag.put("cnpcefPlaySpeeds", PlaySpeedCache.writeSpeeds(key));
+                            if (EpicFightSharedConstants.isPhysicalClient())
+                                RenderStorage.registerRenderer(key, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
+                            tempProvider.addProvider(key, provider);
+                            tempModels.add(key);
+                             tempTags.put(key, filteredTag);
+                             break;
+                         } catch (Exception e) {
+                             LOGGER.error("Failed fallback attempt for {}: {}", key, e.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Failed to find any resource for built-in model {}: {}", key, e.getMessage());
+                }
+            }
+        }
+
+        if (!tempModels.isEmpty()) {
+            branchPatchProvider.resetProviders(tempProvider.getProviders());
+            AVAILABLE_MODELS.clear();
+            AVAILABLE_MODELS.addAll(tempModels);
+            TAGMAP.clear();
+            TAGMAP.putAll(tempTags);
+        } else {
+            LOGGER.error("All entries failed, keeping previous state");
+            if (oldRenderers != null) {
+                RenderStorage.renderersMap = oldRenderers;
+            }
+        }
+
+        EntityPatchProvider.putCustomEntityPatch(CustomEntities.entityCustomNpc, entity -> () -> branchPatchProvider.get(entity));
+    }
+
+    public static MobPatchReloadListener.AbstractMobPatchProvider deserializeMobPatchProvider(CompoundTag tag, boolean clientSide, ResourceManager resourceManager) {
+        boolean disabled = (tag.contains("disabled") && tag.getBoolean("disabled"));
+        if (disabled)
+            return new MobPatchReloadListener.NullPatchProvider();
+        if (tag.contains("preset")) {
+            String presetName = tag.getString("preset");
+            Function<Entity, Supplier<EntityPatch<?>>> preset = EntityPatchProvider.get(presetName);
+            MobPatchReloadListener.MobPatchPresetProvider mobPatchPresetProvider = new MobPatchReloadListener.MobPatchPresetProvider(preset);
+            return mobPatchPresetProvider;
+        }
+        boolean humanoid = tag.getBoolean("isHumanoid");
+
+        MobPatchReloadListener.AbstractMobPatchProvider provider = humanoid ? new NpcHumanoidPatchProvider() : new NpcPatchProvider();
+        final ICustomMobPatchProvider npcPatchProvider = (ICustomMobPatchProvider) provider;
+        CompoundTag attributes = withTopLevelImpact(tag);
+        npcPatchProvider.setAttributeValues(MobPatchReloadListener.deserializeAttributes(attributes));
+        ResourceLocation modelLocation = ResourceLocation.parse(tag.getString("model"));
+        ResourceLocation armatureLocation = ResourceLocation.parse(tag.getString("armature"));
+        if (EpicFightSharedConstants.isPhysicalClient()) {
+            Meshes.getOrCreate(modelLocation,  (jsonAssetLoader) -> jsonAssetLoader.loadSkinnedMesh(humanoid ? HumanoidMesh::new : SkinnedMesh::new));
+        }
+        AssetAccessor<Armature> armature = Armatures.getOrCreate(armatureLocation, humanoid ? yesman.epicfight.model.armature.HumanoidArmature::new : Armature::new);
+        ((INpcPatchProvider) provider).setArmature(armature.get());
+        npcPatchProvider.setDefaultAnimations(MobPatchReloadListener.deserializeDefaultAnimations(tag.getCompound("default_livingmotions")));
+        npcPatchProvider.setFaction(Faction.ENUM_MANAGER.getOrThrow(tag.getString("faction")));
+        npcPatchProvider.setScale(tag.getCompound("attributes").contains("scale") ? (float) tag.getCompound("attributes").getDouble("scale") : 1.0F);
+        if (tag.contains("swing_sound"))
+            npcPatchProvider.setSwingSound(ForgeRegistries.SOUND_EVENTS.getValue(ResourceLocation.parse(tag.getString("swing_sound"))));
+        if (tag.contains("hit_sound"))
+            npcPatchProvider.setHitSound(ForgeRegistries.SOUND_EVENTS.getValue(ResourceLocation.parse(tag.getString("hit_sound"))));
+        if (tag.contains("hit_particle"))
+            npcPatchProvider.setHitParticle((HitParticleType) ForgeRegistries.PARTICLE_TYPES.getValue(ResourceLocation.parse(tag.getString("hit_particle"))));
+        if (!clientSide) {
+            npcPatchProvider.setStunAnimations(MobPatchReloadListener.deserializeStunAnimations(tag.getCompound("stun_animations")));
+            if (tag.getCompound("attributes").contains("chasing_speed")) {
+                npcPatchProvider.setChasingSpeed(tag.getCompound("attributes").getDouble("chasing_speed"));
+            }
+            if (humanoid) {
+                MobPatchReloadListener.CustomHumanoidMobPatchProvider humanoidProvider = (MobPatchReloadListener.CustomHumanoidMobPatchProvider) npcPatchProvider;
+                ((ICustomHumanoidMobPatchProvider) humanoidProvider).setHumanoidCombatBehaviors(MobPatchReloadListener.deserializeHumanoidCombatBehaviors(tag.getList("combat_behavior", 10)));
+                ((ICustomHumanoidMobPatchProvider) humanoidProvider).setHumanoidWeaponMotions(MobPatchReloadListener.deserializeHumanoidWeaponMotions(tag.getList("humanoid_weapon_motions", 10)));
+            } else {
+                npcPatchProvider.setCombatBehaviorsBuilder(MobPatchReloadListener.deserializeCombatBehaviorsBuilder(tag.getList("combat_behavior", 10)));
+            }
+        }
+        return provider;
+    }
+
+    /**
+     * The epicfight data packs written for this addon put {@code impact} at the top level of
+     * the mobpatch file, but both Epic Fight and Indestructible only read it from inside the
+     * {@code attributes} block. Without this merge the value never reaches the entity's
+     * {@code EpicFightAttributes.IMPACT}, so knockback stayed constant no matter what was set.
+     */
+    private static CompoundTag withTopLevelImpact(CompoundTag tag) {
+        CompoundTag attributes = tag.getCompound("attributes");
+
+        if (!attributes.contains("impact") && tag.contains("impact")) {
+            attributes = attributes.copy();
+            attributes.putDouble("impact", tag.getDouble("impact"));
+        }
+
+        return attributes;
+    }
+
+    public static Stream<CompoundTag> getDataStream() {
+        return TAGMAP.values().stream();
+    }
+
+    /**
+     * Validates that every animation referenced by the mobpatch JSON actually exists in the
+     * loaded animation registry. A pack written against EpicFight-Extra keeps working when
+     * that mod is removed; without this check the NPC later tries to play a missing
+     * animation and crashes the game.
+     * <p>
+     * Skipped when the animation registry has not been loaded yet (it would report every
+     * animation as missing and reject every pack).
+     */
+    private static void validateAnimationReferences(ResourceLocation key, CompoundTag tag) {
+        java.util.Map<ResourceLocation, ?> table = AnimationManager.getInstance().getAnimations(a -> true);
+
+        if (table == null || table.isEmpty()) {
+            return;
+        }
+
+        List<String> missing = new ArrayList<>();
+        collectMissingAnimations(table, tag, missing);
+
+        if (!missing.isEmpty()) {
+            throw new RuntimeException("引用的动画不存在（可能依赖未安装的 mod，如 EpicFight-Extra）: " + String.join(", ", missing));
+        }
+    }
+
+    private static void collectMissingAnimations(Map<ResourceLocation, ?> table, CompoundTag tag, List<String> missing) {
+        if (tag.contains("default_livingmotions")) {
+            CompoundTag lm = tag.getCompound("default_livingmotions");
+
+            for (String motion : lm.getAllKeys()) {
+                String anim = lm.getString(motion);
+
+                if (!anim.isEmpty() && !animationExists(table, anim)) {
+                    missing.add("default_livingmotions." + motion + "=" + anim);
+                }
+            }
+        }
+
+        if (tag.contains("combat_behavior")) {
+            net.minecraft.nbt.ListTag list = tag.getList("combat_behavior", 10);
+
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag behavior = list.getCompound(i);
+
+                if (!behavior.contains("animations")) {
+                    continue;
+                }
+
+                collectStrings(table, behavior.getCompound("animations"), "combat_behavior[" + i + "].animations", missing);
+            }
+        }
+    }
+
+    private static void collectStrings(Map<ResourceLocation, ?> table, CompoundTag tag, String path, List<String> missing) {
+        for (String key : tag.getAllKeys()) {
+            String childPath = path + "." + key;
+
+            if (tag.contains(key, 8)) {
+                String anim = tag.getString(key);
+
+                if (!anim.isEmpty() && !animationExists(table, anim)) {
+                    missing.add(childPath + "=" + anim);
+                }
+            } else if (tag.contains(key, 10)) {
+                collectStrings(table, tag.getCompound(key), childPath, missing);
+            }
+        }
+    }
+
+    private static boolean animationExists(Map<ResourceLocation, ?> table, String anim) {
+        ResourceLocation id = ResourceLocation.tryParse(anim);
+
+        if (id == null) {
+            return false;
+        }
+
+        return table.containsKey(id)
+                || table.containsKey(AnimationManager.idToPath(id))
+                || table.containsKey(AnimationManager.pathToId(id));
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public static void processServerPacket(SPDatapackSync packet) {
+
+        // Full wipe is safe here: this listener runs before AdvNpcPatchReloader, which
+        // re-registers its own patches right after. parseAndRegister() also clears per key.
+        PlaySpeedCache.clear();
+
+        NpcBranchPatchProvider tempProvider = new NpcBranchPatchProvider();
+        Set<ResourceLocation> tempModels = new HashSet<>();
+        Map<ResourceLocation, PatchedEntityRenderer> oldRenderers = RenderStorage.renderersMap;
+        RenderStorage.renderersMap = new HashMap<>();
+
+        for (CompoundTag tag : packet.getTags()) {
+            if (tag == null) continue;
+            ResourceLocation key = null;
+            try {
+                key = ResourceLocation.parse(tag.getString("id"));
+                if (tag.contains("cnpcefPlaySpeeds")) {
+                    PlaySpeedCache.readSpeeds(key, tag.getCompound("cnpcefPlaySpeeds"));
+                } else {
+                    PlaySpeedCache.parseAndRegister(key, tag);
+                }
+                validateAnimationReferences(key, tag);
+                boolean disabled = tag.contains("disabled") && tag.getBoolean("disabled");
+                MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, true, Minecraft.getInstance().getResourceManager());
+                if (!disabled) {
+                    Minecraft mc = Minecraft.getInstance();
+                    ResourceLocation armatureLocation = ResourceLocation.parse(tag.getString("armature"));
+                    armatureLocation = ResourceLocation.fromNamespaceAndPath(armatureLocation.getNamespace(), "animmodels/" + armatureLocation.getPath() + ".json");
+                    boolean humanoid = tag.getBoolean("isHumanoid");
+                    AssetAccessor<Armature> armature = Armatures.getOrCreate(armatureLocation, humanoid ? yesman.epicfight.model.armature.HumanoidArmature::new : Armature::new);
+                    ((INpcPatchProvider) provider).setArmature(armature.get());
+                    RenderStorage.registerRenderer(key, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
+                }
+                tempProvider.addProvider(key, provider);
+                tempModels.add(key);
+            } catch (Exception e) {
+                LOGGER.error("Failed to process synced NPC datapack {}: {}", key != null ? key : "unknown", e.getMessage());
+                if (Minecraft.getInstance().player != null) {
+                    Minecraft.getInstance().player.sendSystemMessage(
+                        Component.literal("§c[CNPC-EF Addon CE] Data pack failed to load: " + (key != null ? key : "unknown") + " §7- " + e.getMessage() + " (Skipped)")
+                    );
+                }
+            }
+        }
+
+        if (!tempModels.isEmpty()) {
+            branchPatchProvider.resetProviders(tempProvider.getProviders());
+            AVAILABLE_MODELS.clear();
+            AVAILABLE_MODELS.addAll(tempModels);
+        } else {
+            RenderStorage.renderersMap = oldRenderers;
+        }
+
+        EntityPatchProvider.putCustomEntityPatch(CustomEntities.entityCustomNpc, entity -> () -> branchPatchProvider.get(entity));
+    }
+}

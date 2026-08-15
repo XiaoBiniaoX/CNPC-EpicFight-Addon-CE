@@ -1,0 +1,7 @@
+{
+  "cnpcefaddon.gui.battleDesire": "Боевое стремление",
+  "cnpcefaddon.gui.selectConfig": "Выбрать конфиг",
+  "cnpcefaddon.gui.efConfig": "Конфиг EF",
+  "cnpcefaddon.gui.selectingConfig": "Выбор конфига EpicFight:",
+  "guihint.npcmeleeaggro": "Насколько агрессивно NPC стремится к ближнему бою. Чем больше значение, тем чаще атаки. Оставьте 5.0 для стандартного поведения."
+}
