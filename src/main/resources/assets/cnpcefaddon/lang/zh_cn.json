@@ -3,5 +3,8 @@
   "cnpcefaddon.gui.selectConfig": "选择配置",
   "cnpcefaddon.gui.efConfig": "EF 配置",
   "cnpcefaddon.gui.selectingConfig": "正在选择史诗战斗配置：",
+  "cnpcefaddon.gui.ysmConfig": "YSM 模型",
+  "cnpcefaddon.gui.selectYsm": "选择 YSM",
+  "cnpcefaddon.gui.selectingYsm": "正在选择 YSM 模型：",
   "guihint.npcmeleeaggro": "NPC 主动发起近战攻击的倾向。数值越大攻击越频繁。保持 5.0 维持默认行为。"
 }

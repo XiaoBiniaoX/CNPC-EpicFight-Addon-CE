@@ -38,11 +38,15 @@ public class MixinDataDisplay implements IDataDisplay {
     private ResourceLocation cNPC_EpicFight_Addon$efModelResLoc = null;
     @Unique
     private boolean cNPC_EpicFight_Addon$capApplied = false;
+    @Unique
+    private String cNPC_EpicFight_Addon$ysmModel = null;
 
     @Inject(method = "save", at = @At("HEAD"), remap = false)
     public void writeToNBT(CompoundTag nbttagcompound, CallbackInfoReturnable<CompoundTag> cir) {
         if (hasEFModel())
             nbttagcompound.putString("efModel", cNPC_EpicFight_Addon$efModelResLoc.toString());
+        if (hasYsmModel())
+            nbttagcompound.putString("cnpcefYsmModel", cNPC_EpicFight_Addon$ysmModel);
     }
 
     @Inject(method = "readToNBT", at = @At("HEAD"), remap = false)
@@ -65,6 +69,10 @@ public class MixinDataDisplay implements IDataDisplay {
                 }
             }
         }
+        if (nbttagcompound.contains("cnpcefYsmModel")) {
+            String newModel = nbttagcompound.getString("cnpcefYsmModel");
+            cNPC_EpicFight_Addon$ysmModel = newModel.isEmpty() ? null : newModel;
+        }
     }
 
     @Override
@@ -86,6 +94,24 @@ public class MixinDataDisplay implements IDataDisplay {
     @Unique
     public boolean hasEFModel() {
         return cNPC_EpicFight_Addon$efModelResLoc != null;
+    }
+
+    @Override
+    public void setYsmModel(String modelPath, boolean server) {
+        cNPC_EpicFight_Addon$ysmModel = (modelPath == null || modelPath.isEmpty()) ? null : modelPath;
+        if (server) {
+            npc.updateClient();
+        }
+    }
+
+    @Unique
+    public String getYsmModel() {
+        return cNPC_EpicFight_Addon$ysmModel;
+    }
+
+    @Unique
+    public boolean hasYsmModel() {
+        return cNPC_EpicFight_Addon$ysmModel != null && !cNPC_EpicFight_Addon$ysmModel.isEmpty();
     }
 
     @Unique

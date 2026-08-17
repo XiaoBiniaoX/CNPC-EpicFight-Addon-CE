@@ -1,6 +1,7 @@
 package com.goodbird.cnpcefaddon.mixin.impl;
 
 import com.goodbird.cnpcefaddon.client.gui.GuiStringSelection;
+import com.goodbird.cnpcefaddon.client.ysm.YsmefOptional;
 import com.goodbird.cnpcefaddon.common.NpcPatchReloadListener;
 import com.goodbird.cnpcefaddon.mixin.IDataDisplay;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.List;
 import java.util.Vector;
 
 @Mixin(value = GuiCreationEntities.class, priority = 1001)
@@ -32,6 +34,12 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
      */
     private static final int EF_ROW_Y = 190;
 
+    /**
+     * YSM model row sits one slot above the EF config row, still inside the free bottom
+     * band below the preview and above any other addon rows: {@code guiTop + 165}.
+     */
+    private static final int YSM_ROW_Y = 165;
+
     public MixinGuiCreationEntities() {
         super(null);
     }
@@ -47,8 +55,6 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
             curName = ((IDataDisplay)npc.display).getEFModel().toString();
         }
 
-        // Same column as the rotation slider below it; the label sits in the gap between
-        // the entity scroll list (ends at guiLeft + 120) and the button.
         int buttonX = this.guiLeft + this.xOffset + 142;
         int labelX = this.guiLeft + 130;
 
@@ -59,6 +65,24 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
                 getButton(302).setDisplayText(name);
             }));
         }));
+
+        // YSM model selection: only meaningful when the EF config row already picked an Epic
+        // Fight model and ysm_epicfight_compat (plus the YSM base mod) is installed. When the
+        // mod is absent the list is empty and the button still opens but offers no choices.
+        if (YsmefOptional.isLoaded()) {
+            List<String> ysmModels = YsmefOptional.tryAvailableModelIds();
+            String curYsm = "cnpcefaddon.gui.selectYsm";
+            if (((IDataDisplay)npc.display).hasYsmModel()) {
+                curYsm = ((IDataDisplay)npc.display).getYsmModel();
+            }
+            addLabel(new GuiLabel(313, "cnpcefaddon.gui.ysmConfig", labelX, this.guiTop + YSM_ROW_Y + 6, 0xffffff));
+            this.addButton(new GuiButtonNop(this, 303, buttonX, this.guiTop + YSM_ROW_Y, 120, 20, curYsm, (b) -> {
+                setSubGui(new GuiStringSelection(this, "cnpcefaddon.gui.selectingYsm", ysmModels, name -> {
+                    ((IDataDisplay)npc.display).setYsmModel(name, false);
+                    getButton(303).setDisplayText(name);
+                }));
+            }));
+        }
     }
 
     @Override

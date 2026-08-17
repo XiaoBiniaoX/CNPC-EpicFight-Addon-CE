@@ -10,4 +10,12 @@ public interface IDataDisplay {
     ResourceLocation getEFModel();
 
     boolean hasEFModel();
+
+    default void setYsmModel(String modelPath) {
+        setYsmModel(modelPath, true);
+    }
+    void setYsmModel(String modelPath, boolean server);
+    String getYsmModel();
+
+    boolean hasYsmModel();
 }

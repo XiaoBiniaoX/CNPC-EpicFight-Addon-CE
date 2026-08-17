@@ -3,5 +3,8 @@
   "cnpcefaddon.gui.selectConfig": "Выбрать конфиг",
   "cnpcefaddon.gui.efConfig": "Конфиг EF",
   "cnpcefaddon.gui.selectingConfig": "Выбор конфига EpicFight:",
+  "cnpcefaddon.gui.ysmConfig": "Модель YSM",
+  "cnpcefaddon.gui.selectYsm": "Выбрать YSM",
+  "cnpcefaddon.gui.selectingYsm": "Выбор модели YSM:",
   "guihint.npcmeleeaggro": "Насколько агрессивно NPC стремится к ближнему бою. Чем больше значение, тем чаще атаки. Оставьте 5.0 для стандартного поведения."
 }

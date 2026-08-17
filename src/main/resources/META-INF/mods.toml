@@ -72,3 +72,13 @@ A compatibility bridge between CustomNPCs and EpicFight
     versionRange="[0,)"
     ordering="AFTER"
     side="BOTH"
+# Optional: when YSM Epic Fight Compat (and its YSM base mod) is installed, an NPC
+# whose data pack uses this addon's Epic Fight renderer can additionally pick a YSM
+# model from the YSM base-mod library. The mesh is swapped at render time through
+# YSM-EF's mesh library; nothing here references YSM classes directly.
+[[dependencies.cnpcefaddon]]
+    modId="ysm_epicfight_compat"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="CLIENT"

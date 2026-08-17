@@ -42,6 +42,7 @@
     "MixinLayerHeadwear",
     "MixinLivingEntityPatch",
     "MixinPCustomEntityRenderer",
+    "MixinPatchedEntityRenderer",
     "MixinPatchedLivingEntityRenderer",
     "MixinRenderEngine",
     "MixinRenderEngineEvents",

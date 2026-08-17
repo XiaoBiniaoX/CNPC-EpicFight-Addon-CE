@@ -3,5 +3,8 @@
   "cnpcefaddon.gui.selectConfig": "Select Config",
   "cnpcefaddon.gui.efConfig": "EF Config",
   "cnpcefaddon.gui.selectingConfig": "Selecting epicfight config:",
+  "cnpcefaddon.gui.ysmConfig": "YSM Model",
+  "cnpcefaddon.gui.selectYsm": "Select YSM",
+  "cnpcefaddon.gui.selectingYsm": "Selecting YSM model:",
   "guihint.npcmeleeaggro": "How aggressively the NPC seeks melee combat. Higher values make it attack more often. Keep 5.0 for default behavior."
 }
