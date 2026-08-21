@@ -19,6 +19,7 @@
     "MixinDataDisplay",
     "MixinDataDisplaySetVisible",
     "MixinEntityLivingWrapper",
+    "MixinEntityNpcArmorSlots",
     "MixinEntityNpcInterface",
     "MixinEntityNpcNativeAttack",
     "MixinEntityAIRangedAttack",

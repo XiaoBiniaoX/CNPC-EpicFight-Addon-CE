@@ -82,3 +82,20 @@ A compatibility bridge between CustomNPCs and EpicFight
     versionRange="[0,)"
     ordering="AFTER"
     side="CLIENT"
+# Optional: Fantasy Armor uses a shared GeckoLib armor renderer. Epic Fight converts that renderer
+# into a skinned mesh for NPCs; the addon clears the per-item mesh when the renderer switches NPC
+# so slot-specific bones cannot remain hidden from a previous entity.
+[[dependencies.cnpcefaddon]]
+    modId="fantasy_armor"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="CLIENT"
+# Optional: Epic Knights keeps helmet plumes, crests and other decorations in a separate layer.
+# The addon installs its official Epic Fight patched layer on CNPC's own patched renderers.
+[[dependencies.cnpcefaddon]]
+    modId="magistuarmory"
+    mandatory=false
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="CLIENT"
