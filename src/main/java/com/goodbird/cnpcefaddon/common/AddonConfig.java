@@ -14,6 +14,9 @@ public class AddonConfig {
     public static final ForgeConfigSpec.ConfigValue<String> ONE_HAND_WEAPON_FACTOR;
     public static final ForgeConfigSpec.ConfigValue<String> TWO_HAND_WEAPON_FACTOR;
 
+    public static final ForgeConfigSpec.BooleanValue SUPPRESS_EPICFIGHT_LOG;
+    public static final ForgeConfigSpec.BooleanValue SUPPRESS_INDESTRUCTIBLE_LOG;
+
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
@@ -87,6 +90,32 @@ public class AddonConfig {
                 "weapon damage calculation and use the configured melee strength through animation scaling."
         );
         TWO_HAND_WEAPON_FACTOR = builder.define("twoHandWeaponDamageFactor", "0.9");
+
+        builder.pop();
+
+        builder.push("log_suppression");
+
+        builder.comment(
+                "抑制史诗战斗的技能数据键日志（\"Data keys [...] for ...\"）。",
+                "该日志在每次数据包/资源重载时把所有技能的数据键完整打印一遍，",
+                "条数随已装技能模组数量增长，纯属注册表内部信息，无诊断价值。",
+                "仅过滤这一类 INFO，史诗战斗的其他日志与全部 WARN/ERROR 一律保留。",
+                "Suppress Epic Fight's skill data key dump (\"Data keys [...] for ...\"),",
+                "reprinted in full on every datapack/resource reload. Only this INFO line is",
+                "filtered; all other Epic Fight logs and every WARN/ERROR are kept."
+        );
+        SUPPRESS_EPICFIGHT_LOG = builder.define("suppressEpicFightDataKeyLog", true);
+
+        builder.comment(
+                "抑制坚不可摧的\"xxx can't be recognized\"警告。",
+                "该警告在解析数据包时对每个未识别的可选字段各打一条，",
+                "一个较大的数据包可产生数百条，会把日志刷满，但不影响功能。",
+                "仅过滤这一类 WARN，坚不可摧的其他日志与全部 ERROR 一律保留。",
+                "Suppress Indestructible's \"xxx can't be recognized\" warnings, emitted once per",
+                "unrecognised optional field while parsing datapacks (hundreds for a large pack).",
+                "Only this WARN pattern is filtered; other logs and every ERROR are kept."
+        );
+        SUPPRESS_INDESTRUCTIBLE_LOG = builder.define("suppressIndestructibleUnrecognizedWarn", true);
 
         builder.pop();
 

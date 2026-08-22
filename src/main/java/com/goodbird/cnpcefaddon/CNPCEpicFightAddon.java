@@ -3,6 +3,7 @@ package com.goodbird.cnpcefaddon;
 import com.goodbird.cnpcefaddon.common.AddonConfig;
 import com.goodbird.cnpcefaddon.common.AdvNpcPatchReloader;
 import com.goodbird.cnpcefaddon.common.FactionDamageHandler;
+import com.goodbird.cnpcefaddon.common.LogSuppressor;
 import com.goodbird.cnpcefaddon.common.NpcPatchReloadListener;
 import com.goodbird.cnpcefaddon.common.PlayerStunHandler;
 import com.goodbird.cnpcefaddon.common.network.NetworkHandler;
@@ -38,6 +39,8 @@ public class CNPCEpicFightAddon {
         MinecraftForge.EVENT_BUS.register(FactionDamageHandler.class);
         MinecraftForge.EVENT_BUS.register(PlayerStunHandler.class);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, AddonConfig.SPEC);
+        // 尽早安装：技能数据键日志在注册表事件期间就会打印。
+        LogSuppressor.install();
     }
 
     private void doCommonStuff(FMLCommonSetupEvent event) {
