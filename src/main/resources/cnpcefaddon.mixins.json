@@ -1,4 +1,4 @@
-{
+﻿{
   "required": true,
   "package": "com.goodbird.cnpcefaddon.mixin.impl",
   "compatibilityLevel": "JAVA_17",
@@ -40,6 +40,7 @@
     "MixinCustomGuiEntityDisplay",
     "MixinGuiCreationEntities",
     "MixinEntityNPCInvisible",
+    "MixinGeoChestUnitFix",
     "MixinLayerHeadwear",
     "MixinLivingEntityPatch",
     "MixinPCustomEntityRenderer",

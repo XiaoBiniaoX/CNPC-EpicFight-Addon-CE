@@ -144,7 +144,8 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
 
         ResourceLocation samuraiKey = ResourceLocation.parse("customnpcs:samurai");
         if (!tempModels.contains(samuraiKey)) {
-            LOGGER.error("Built-in adv model {} not loaded from datapack, attempting fallback", samuraiKey);
+            // 正常回退流程，不是错误：内置模型未随数据包加载时直接读内置资源。
+            // 真正失败会在下面两处 catch 里报 error。
             try {
                 ResourceLocation filePath = ResourceLocation.fromNamespaceAndPath(
                     samuraiKey.getNamespace(), "adv_npc_epicfight_mobpatch/" + samuraiKey.getPath() + ".json");

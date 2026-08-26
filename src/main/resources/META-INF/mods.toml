@@ -47,6 +47,22 @@ A compatibility bridge between CustomNPCs and EpicFight
     versionRange="[20.14.11,)"
     ordering="AFTER"
     side="BOTH"
+# Hard dependency: AdvNpcPatch extends Indestructible's AdvancedCustomHumanoidMobPatch and
+# several mixins target its classes directly, so the addon cannot load without it.
+# Previously missing from this file even though it is a compile-time implementation dependency.
+[[dependencies.cnpcefaddon]]
+    modId="indestructible"
+    mandatory=true
+    versionRange="[20.12.0,)"
+    ordering="AFTER"
+    side="BOTH"
+# Hard dependency: CNPC itself. Was likewise absent from this file.
+[[dependencies.cnpcefaddon]]
+    modId="customnpcs"
+    mandatory=true
+    versionRange="[1.20.1,)"
+    ordering="AFTER"
+    side="BOTH"
 # Optional ordering hint: when EpicFight-Extra is installed, load this addon AFTER it so
 # our bundled vanilla biped armature resources override its modified ones. Not a hard
 # dependency: the mod works fine without epicfightx.
