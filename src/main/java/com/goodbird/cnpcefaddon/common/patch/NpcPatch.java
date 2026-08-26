@@ -30,6 +30,15 @@ public class NpcPatch<T extends PathfinderMob> extends CustomMobPatch<T> impleme
         animator.postInit();
     }
 
+    @Override
+    public void updateMotion(boolean considerInaction) {
+        // 必须在 super 之前：清掉已落地却残留的向下速度，
+        // 否则 MobPatch:85 的 deltaY < -0.55 恒真，永远判 FALL 而走不到行走判定。
+        com.goodbird.cnpcefaddon.common.GroundedFallFix.clearStaleFallVelocity(this);
+
+        super.updateMotion(considerInaction);
+    }
+
     public OpenMatrix4f getModelMatrix(float partialTicks) {
         EntityNPCInterface npc = (EntityNPCInterface) original;
         float scale = (npc.display != null) ? npc.display.getSize() / 5f : 1f;
