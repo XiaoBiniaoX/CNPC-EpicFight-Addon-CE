@@ -23,7 +23,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
 // In-game version reported through ${file.jarVersion} in mods.toml.
-version = "2.1.0"
+version = "2.6.0"
 group = "noppes.npcs" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "CNPC-EpicFight-Addon-CE-1.20.1-Forge"
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -150,6 +150,10 @@ dependencies {
     implementation fg.deobf('lib:CustomNPCs:1.20.1-GBPort-Unofficial-1.20.1.20260711')
     implementation fg.deobf('lib:epic-fight:20.14.17-mc1.20.1-forge')
     implementation fg.deobf('lib:indestructible:20.12.0')
+    compileOnly fg.deobf('lib:curios-forge:5.14.1+1.20.1')
+    compileOnly fg.deobf('lib:YSM_EpicFight_Compat:1.20.1-1.8.0-all')
+    compileOnly fg.deobf('lib:epic-knights:1.20.1-forge-10.11')
+    compileOnly fg.deobf('lib:fantasy_armor:1.2.4-1.20.1')
 //    implementation fg.deobf('lib:indestructible:20.6.7')
     //compile group: 'com.h2database', name: 'h2', version: '1.4.200'
     //extraLibs group: 'com.h2database', name: 'h2', version: '1.4.200'
@@ -177,7 +181,7 @@ dependencies {
 
 // Example for how to get properties into the manifest for reading by the runtime..
 jar {
-    // Exact artifact name requested for releases: ...-Forge-V2.1.0.jar
+    // Exact artifact name requested for releases: ...-Forge-V2.2.0.jar
     archiveFileName = "${archivesBaseName}-V${version}.jar"
 
     manifest {
@@ -197,6 +201,45 @@ jar {
 mixin {
     add sourceSets.main, "cnpcefaddon.refmap.json"
 }
+
+// A UTF-8 BOM in a mixin config is fatal on any machine whose default charset is not
+// UTF-8 (GBK on Chinese Windows, windows-1252 on western ones): Mixin reads the config
+// with a charset-less InputStreamReader, so the BOM decodes to a real character and the
+// first JSON token becomes a STRING instead of '{'. The mod then dies at launch with
+// "Expected BEGIN_OBJECT but was STRING at line 1 column 1 path $" - before any mod
+// loads, so the crash report blames nothing in particular.
+//
+// Editors and PowerShell's -Encoding UTF8 keep re-adding it, so strip it during
+// processResources instead of relying on the file staying clean in git.
+processResources {
+    filesMatching(['**/*.json', '**/*.toml', '**/*.mcmeta']) {
+        filter { line -> line.startsWith('\uFEFF') ? line.substring(1) : line }
+    }
+}
+
+// Fail the build rather than shipping a jar that only crashes on other people's machines.
+def assertNoBom = tasks.register('assertNoBom') {
+    dependsOn processResources
+    doLast {
+        def offenders = []
+        fileTree(sourceSets.main.output.resourcesDir)
+                .matching { include '**/*.json', '**/*.toml', '**/*.mcmeta' }
+                .each { f ->
+            def head = new byte[3]
+            f.withInputStream { it.read(head, 0, 3) }
+            if (head[0] == (byte) 0xEF && head[1] == (byte) 0xBB && head[2] == (byte) 0xBF) {
+                offenders << f.name
+            }
+        }
+        if (offenders) {
+            throw new GradleException("UTF-8 BOM found in packaged resource(s): ${offenders}. " +
+                    "A BOM in a mixin config crashes the game on non-UTF-8 default charsets.")
+        }
+        logger.lifecycle("assertNoBom: no BOM in packaged json/toml/mcmeta resources")
+    }
+}
+
+classes.dependsOn assertNoBom
 
 jar.finalizedBy('reobfJar')
 
