@@ -1,4 +1,4 @@
-﻿{
+{
   "required": true,
   "package": "com.goodbird.cnpcefaddon.mixin.impl",
   "compatibilityLevel": "JAVA_17",
