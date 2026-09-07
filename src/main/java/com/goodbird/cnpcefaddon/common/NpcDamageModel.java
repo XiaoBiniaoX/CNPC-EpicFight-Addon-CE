@@ -57,6 +57,19 @@ public final class NpcDamageModel {
             return modifiedDamage;
         }
 
+        // CE patch 自带完整伤害管线：数据包 attack_damage 属性、行为树 phaseParams 的
+        // damageMultiplier（CE 自己的 EFAttackAnimationMixin 应用）、以及我方战斗欲望的
+        // attachDamageModifier。本模型会把返回值整体替换为 weapons + configured，
+        // 三者全部被丢弃 —— 实测表现为 damage 恒 1.0，且与数据包 attack_damage=12.0 无关、
+        // 战斗欲望 0/5/10 三档毫无差别。
+        //
+        // 故对 CE patch 一律让位，交回 CE/EF 自己的结算结果。
+        // 旧三种 patch 口味（NpcHumanoidPatch / AdvNpcPatch / NpcPatch）行为完全不变，
+        // 旧数据包与 AddonConfig 的两个系数继续生效（约法第 9 条）。
+        if (patch instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch) {
+            return modifiedDamage;
+        }
+
         float mainHand = weaponDamage(patch, InteractionHand.MAIN_HAND);
         float offHand = weaponDamage(patch, InteractionHand.OFF_HAND);
 

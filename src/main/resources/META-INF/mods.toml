@@ -115,3 +115,13 @@ A compatibility bridge between CustomNPCs and EpicFight
     versionRange="[0,)"
     ordering="AFTER"
     side="CLIENT"
+# Optional: enables the CE datapack compatibility bridge for CNPCs when Combat Evolution is installed.
+# The addon remains fully functional without Combat Evolution; load after CE so its registries and
+# datapack-facing runtime classes are available before this bridge is activated.
+[[dependencies.cnpcefaddon]]
+    modId="combat_evolution"
+    mandatory=false
+    versionRange="[2.2.6,)"
+    ordering="AFTER"
+    side="BOTH"
+

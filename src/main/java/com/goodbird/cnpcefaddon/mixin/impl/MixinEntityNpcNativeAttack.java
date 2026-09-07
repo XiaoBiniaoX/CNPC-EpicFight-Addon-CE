@@ -47,8 +47,31 @@ public abstract class MixinEntityNpcNativeAttack {
 
         LivingEntityPatch<?> patch = EpicFightCapabilities.getEntityPatch(self, LivingEntityPatch.class);
 
+
         if (!(patch instanceof INpcPatch)) {
             // No Epic Fight model on this NPC: native Custom NPCs behaviour stays as-is.
+            return;
+        }
+
+        if (!((INpcPatch) patch).suppressNativeAttack()) {
+            return;
+        }
+
+        // The native goal is the only attack path while an EF/CE goal is absent (for example
+        // during capability replacement or when a datapack has no matching weapon category).
+        // Do not cancel that fallback, otherwise a missing combat goal becomes a completely
+        // harmless NPC with no animation or damage.
+        boolean hasEpicFightAttackGoal = false;
+        for (var wrapped : self.goalSelector.getAvailableGoals()) {
+            String name = wrapped.getGoal().getClass().getName();
+            if (name.equals("yesman.epicfight.world.entity.ai.goal.AnimatedAttackGoal")
+                    || name.equals("com.nameless.indestructible.world.ai.goal.AdvancedCombatGoal")
+                    || name.equals("net.shelmarow.combat_evolution.ai.goal.CEAnimationAttackGoal")) {
+                hasEpicFightAttackGoal = true;
+                break;
+            }
+        }
+        if (!hasEpicFightAttackGoal) {
             return;
         }
 
@@ -57,8 +80,17 @@ public abstract class MixinEntityNpcNativeAttack {
 
             if (efSource != null) {
                 // This call comes from MobPatch.attack, i.e. an actual Epic Fight attack animation.
+                // Let the native method run so Custom NPCs' own bookkeeping (aggro, quest
+                // triggers) still happens; EF has already applied its damage through
+                // LivingEntity.hurt with this source.
                 return;
             }
+            // CE 的攻击动画在 attack() 返回后会立刻清掉 epicFightDamageSource，
+            // 而 CNPC 的 EntityAIAttackTarget 仍可能在同一 tick 内独立调 doHurtTarget。
+            // 该次原生攻击会消耗 target.invulnerableTime，把紧随其后的 EF 判定吃掉 ——
+            // 实测表现为 attackResult.damage 恒 1.0（与数据包 attack_damage 无关）、
+            // 且因 dealtDamage 实际落空而听不到命中音效。
+            // 下面的 cancel 分支正是为此存在，此处不再额外放行。
         }
 
         cir.setReturnValue(false);

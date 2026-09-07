@@ -1,0 +1,78 @@
+{
+
+  "faction": "undead",
+  "renderer": "zombie",
+  "model": "epicfight:entity/biped",
+  "armature": "epicfight:entity/biped",
+  "humanoid": true,
+
+  "chasingSpeed": 1.25,
+  "scale": 1.0,
+  "breakTime": 40,
+  "recoverTime": 60,
+  "staminaRegenDelay": 60,
+  "beParriedDamage": 1,
+  "guardHitImpact": 1,
+  "hurtImpact": 0.35,
+
+  "attributes": [
+    { "attribute": "minecraft:generic.max_health", "value": 60.0 },
+    { "attribute": "minecraft:generic.attack_damage", "value": 6.0 },
+    { "attribute": "minecraft:generic.movement_speed", "value": 0.25 },
+    { "attribute": "minecraft:generic.follow_range", "value": 32.0 },
+    { "attribute": "epicfight:staminar", "value": 20 },
+    { "attribute": "epicfight:stamina_regen", "value": 1 },
+    { "attribute": "epicfight:impact", "value": 1.0 },
+    { "attribute": "epicfight:armor_negation", "value": 0.0 },
+    { "attribute": "epicfight:max_strikes", "value": 1 }
+  ],
+
+  "stunAnimations": {
+    "short": "epicfight:biped/combat/hit_short",
+    "long": "epicfight:biped/combat/hit_long",
+    "hold": "epicfight:biped/combat/hit_short",
+    "fall": "epicfight:biped/living/landing",
+    "knockdown": "epicfight:biped/combat/knockdown",
+    "neutralize": "epicfight:biped/skill/guard_break1"
+  },
+
+  "combatBehaviors": [
+    {
+      "weaponCategories": ["sword", "longsword", "spear"],
+      "style": "common",
+      "behaviorRoots": [
+        {
+          "rootName": "t01_basic_combo",
+          "priority": 1,
+          "weight": 1,
+          "maxCooldown": 40,
+          "cooldown": 0,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t01_auto1",
+              "priority": 1,
+              "weight": 1,
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 }
+              ],
+              "animation": "epicfight:biped/combat/sword_auto1",
+               "animationParams": {
+                 "transitionTime": 0.15,
+                 "playSpeed": 1.0
+              },
+              "nextBehaviors": [
+                {
+                  "behaviorName": "t01_auto2",
+                  "conditions": [
+                    { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 }
+                  ],
+                    "animation": "epicfight:biped/combat/sword_auto2"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

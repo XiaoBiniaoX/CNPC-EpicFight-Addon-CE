@@ -23,7 +23,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.spongepowered.mixin'
 
 // In-game version reported through ${file.jarVersion} in mods.toml.
-version = "2.6.0"
+version = "2.7.0"
 group = "noppes.npcs" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "CNPC-EpicFight-Addon-CE-1.20.1-Forge"
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -154,6 +154,7 @@ dependencies {
     compileOnly fg.deobf('lib:YSM_EpicFight_Compat:1.20.1-1.8.0-all')
     compileOnly fg.deobf('lib:epic-knights:1.20.1-forge-10.11')
     compileOnly fg.deobf('lib:fantasy_armor:1.2.4-1.20.1')
+    compileOnly fg.deobf('lib:CombatEvolution:2.2.6')
 //    implementation fg.deobf('lib:indestructible:20.6.7')
     //compile group: 'com.h2database', name: 'h2', version: '1.4.200'
     //extraLibs group: 'com.h2database', name: 'h2', version: '1.4.200'

@@ -1,0 +1,146 @@
+{
+
+  "faction": "undead",
+  "renderer": "zombie",
+  "model": "epicfight:entity/biped",
+  "armature": "epicfight:entity/biped",
+  "humanoid": true,
+
+  "chasingSpeed": 1.15,
+  "scale": 1.0,
+  "breakTime": 50,
+  "recoverTime": 70,
+  "staminaRegenDelay": 40,
+  "beParriedDamage": 1,
+  "guardHitImpact": 0.5,
+  "hurtImpact": 0.25,
+
+  "attributes": [
+    { "attribute": "minecraft:generic.max_health", "value": 100.0 },
+    { "attribute": "minecraft:generic.attack_damage", "value": 7.0 },
+    { "attribute": "epicfight:staminar", "value": 40 },
+    { "attribute": "epicfight:stamina_regen", "value": 2 }
+  ],
+
+  "guardHitAnimation": [
+    {
+      "weaponCategories": ["sword"],
+      "style": "common",
+      "animations": [
+        "epicfight:biped/skill/guard_sword_hit_active1",
+        "epicfight:biped/skill/guard_sword_hit_active2",
+        "epicfight:biped/skill/guard_sword_hit_active3"
+      ]
+    },
+    {
+      "weaponCategories": ["longsword"],
+      "style": "common",
+      "animations": [
+        "epicfight:biped/skill/guard_longsword_hit_active1"
+      ]
+    }
+  ],
+
+  "stunAnimations": {
+    "short": "epicfight:biped/combat/hit_short",
+    "long": "epicfight:biped/combat/hit_long",
+    "hold": "epicfight:biped/combat/hit_short",
+    "fall": "epicfight:biped/living/landing",
+    "knockdown": "epicfight:biped/combat/knockdown",
+    "neutralize": "epicfight:biped/skill/guard_break1"
+  },
+
+  "combatBehaviors": [
+    {
+      "weaponCategories": ["sword", "longsword"],
+      "style": "common",
+      "behaviorRoots": [
+        {
+          "rootName": "t03_guard_random_counter",
+          "priority": 3,
+          "weight": 2,
+          "maxCooldown": 80,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t03_random_counter",
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 5 }
+              ],
+              "guardTime": 60,
+              "resetGuardTime": false,
+              "guardCost": 1,
+              "counterAnimation": "combat_evolution:biped/skill/shield_counter/shield_counter",
+              "counterType": "random",
+              "counterChance": 0.35,
+              "animationParams": {
+                "transitionTime": 0,
+                "phaseParams": [
+                  { "damageMultiplier": 1.2, "impactMultiplier": 1.5, "armorNegationMultiplier": 2.0 }
+                ]
+              },
+              "onGuardHit": [
+                { "onTarget": false, "command": "/say [T03] onGuardHit (random)" }
+              ],
+              "onCounterStart": [
+                { "onTarget": false, "command": "/say [T03] onCounterStart (random)" }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t03_guard_end_counter",
+          "priority": 2,
+          "weight": 1,
+          "maxCooldown": 100,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t03_end_counter",
+              "behaviorType": "guard",
+              "conditions": [
+                { "type": "combat_evolution:stamina_check", "stamina": 0.3, "comparator": "greater_ratio_contain" }
+              ],
+              "guardTime": 80,
+              "resetGuardTime": true,
+              "guardCost": 1,
+              "counterAnimation": "combat_evolution:biped/skill/shield_counter/shield_counter",
+              "counterType": "end",
+              "maxGuardHit": 3,
+              "onGuardHit": [
+                { "onTarget": false, "command": "/say [T03] blocked one hit (end)" }
+              ],
+              "beforeCounter": {
+                "cancelHitAnimation": false,
+                "onTarget": false,
+                "command": "/say [T03] beforeCounter"
+              },
+              "onCounterStart": [
+                { "onTarget": false, "command": "/say [T03] onCounterStart (end)" }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t03_guard_never_counter",
+          "priority": 1,
+          "weight": 1,
+          "maxCooldown": 120,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t03_never_counter",
+              "conditions": [
+                { "type": "combat_evolution:health_check", "health": 0.5, "comparator": "less_ratio_contain" }
+              ],
+              "guardTime": 100,
+              "guardCost": 0.5,
+              "counterAnimation": "combat_evolution:biped/skill/shield_counter/shield_counter",
+              "counterType": "never",
+              "onGuardHit": [
+                { "onTarget": false, "command": "/say [T03] pure defense (never)" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

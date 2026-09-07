@@ -77,6 +77,9 @@ public class MixinDataDisplay implements IDataDisplay {
 
     @Override
     public void setEFModel(ResourceLocation modelPath, boolean server) {
+        // 这是 GUI 切换 efModel 的真实入口。旧 patch 若为 CE，其 CEBossEvent/BGM
+        // 不在此处清理就会残留 —— 用户报告「切走后 BOSS 血条依然存在」的第一嫌疑。
+        LivingEntityPatch<?> before = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
         cNPC_EpicFight_Addon$efModelResLoc = modelPath;
         cNPC_EpicFight_Addon$capApplied = false;
         if (server) {
@@ -84,6 +87,7 @@ public class MixinDataDisplay implements IDataDisplay {
             cNPC_EpicFight_Addon$capApplied = true;
             npc.updateClient();
         }
+        LivingEntityPatch<?> after = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
     }
 
     @Unique
@@ -114,6 +118,23 @@ public class MixinDataDisplay implements IDataDisplay {
         return cNPC_EpicFight_Addon$ysmModel != null && !cNPC_EpicFight_Addon$ysmModel.isEmpty();
     }
 
+    @Override
+    public void refreshEFModel() {
+        LivingEntityPatch<?> before = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
+        if (!hasEFModel()) {
+            return;
+        }
+        if (before instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
+            cePatch.clearReloadState();
+        }
+        // Force a new provider lookup. Reusing the old patch also reuses its CE BossBar,
+        // BGM packet UUID, and parsed behavior provider after /reload.
+        cNPC_EpicFight_Addon$capApplied = false;
+        cNPC_EpicFight_Addon$updateModelCap();
+        cNPC_EpicFight_Addon$capApplied = true;
+        LivingEntityPatch<?> after = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
+    }
+
     @Unique
     private void cNPC_EpicFight_Addon$updateModelCap() {
         CapabilityDispatcher dispatcher = ((MixinCapabilityProvider) npc).invokeGetCapabilities();
@@ -125,17 +146,49 @@ public class MixinDataDisplay implements IDataDisplay {
         ICapabilityProvider[] caps = ((IMixinCapabilityDispatcher) (Object) dispatcher).getCaps();
 
         LivingEntityPatch<?> existing = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
-        if (existing != null && cNPC_EpicFight_Addon$capApplied) {
+        // 复用现有 patch 之前必须确认它仍与当前 efModel 匹配。
+        // 踩坑第 44 条：旧实现只判 existing != null，于是切换 efModel 后服务端永远命中
+        // EXISTING → patch 永不重建 → 切到 CE 数据包时服务端仍是 NpcHumanoidPatch（无 CE 效果），
+        // 切走时又残留 CeNpcPatch 的 visible BossBar 与 BGM 发包。双端日志已铁证。
+        // EntityPatchProvider 构造无副作用（仅查表取实例，get() 纯返回字段），可安全预构造用于比类型。
+        EntityPatchProvider expectedProvider = new EntityPatchProvider(npc);
+        Object expected = expectedProvider.get();
+        boolean typeMatches = existing != null && expected != null
+                && existing.getClass() == expected.getClass();
+        // 类型相同还不够：同一 patch 类可对应任意多份数据包 provider（5 份 CE 测试包全是
+        // CeNpcPatch）。ce_test_01 → ce_test_05 切换实测被旧判据放过，服务端仍持 01 的
+        // provider（无 BossBar/BGM），而客户端已重建为 05（visible=true）→ 双端不一致。
+        boolean providerMatches = typeMatches;
+        if (typeMatches
+                && existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch currentCe
+                && expected instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch expectedCe) {
+            providerMatches = currentCe.getNpcProvider() == expectedCe.getNpcProvider();
+        }
+        if (existing != null && cNPC_EpicFight_Addon$capApplied && !providerMatches) {
+        }
+        if (existing != null && cNPC_EpicFight_Addon$capApplied && providerMatches) {
             if (existing instanceof HumanoidMobPatch<?> humanoid) {
                 humanoid.setAIAsInfantry(npc.getMainHandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem);
+            }
+            // CE patch 不是 HumanoidMobPatch 的子类，其行为树 Goal 只在 initAI 内挂载。
+            if (existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
+                cePatch.initAI();
             }
             if (npc.level().isClientSide() && existing instanceof NpcHumanoidPatch<?> npcPatch) {
                 npcPatch.applyWeaponLivingMotions();
             }
+            if (npc.level().isClientSide() && existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
+                cePatch.applyCeLivingMotions();
+            }
             return;
         }
 
-        EntityPatchProvider newProvider = new EntityPatchProvider(npc);
+        // 重建前清掉旧 CE patch 的 BossBar 玩家与 BGM，否则换型后旧血条/旧音乐仍挂在客户端。
+        if (existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch oldCePatch) {
+            oldCePatch.clearReloadState();
+        }
+
+        EntityPatchProvider newProvider = expectedProvider;
         if (newProvider.get() == null) return;
         ((IAttributeMap) npc.getAttributes()).setSupplier(new EpicFightAttributeSupplier(((IAttributeMap) npc.getAttributes()).getSupplier()));
         try {
@@ -146,8 +199,21 @@ public class MixinDataDisplay implements IDataDisplay {
             }
         }
         ((EntityPatch) newProvider.get()).onJoinWorld(npc, new EntityJoinLevelEvent(npc, npc.level()));
+        // CNPC swaps this capability after the entity already joined its level. CE puts its
+        // datapack attributes (staminar/stamina_regen included) in onAddedToWorld(), so the
+        // normal Forge lifecycle has already passed and must be replayed for CE only.
+        if (newProvider.get() instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
+            cePatch.onAddedToWorld();
+            // CE 的行为树 Goal 只在 initAI 内挂载，且必须在属性注入之后：
+            // getCustomWeaponMotionBuilder 依赖手持武器 capability 与已注入的属性。
+            // 缺这一步 NPC 没有 CEAnimationAttackGoal，既不出刀光也不造成伤害。
+            cePatch.initAI();
+        }
         if (npc.level().isClientSide() && newProvider.get() instanceof NpcHumanoidPatch<?> npcPatch) {
             npcPatch.applyWeaponLivingMotions();
+        }
+        if (npc.level().isClientSide() && newProvider.get() instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
+            cePatch.applyCeLivingMotions();
         }
         if (newProvider.hasCapability()) {
             boolean hasFoundAny = false;

@@ -348,18 +348,28 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                 }
                 validateAnimationReferences(key, tag);
                 boolean disabled = tag.contains("disabled") && tag.getBoolean("disabled");
-                MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, true, Minecraft.getInstance().getResourceManager());
-                if (!disabled) {
-                    Minecraft mc = Minecraft.getInstance();
-                    ResourceLocation armatureLocation = ResourceLocation.parse(tag.getString("armature"));
-                    armatureLocation = ResourceLocation.fromNamespaceAndPath(armatureLocation.getNamespace(), "animmodels/" + armatureLocation.getPath() + ".json");
-                    boolean humanoid = tag.getBoolean("isHumanoid");
-                    AssetAccessor<Armature> armature = Armatures.getOrCreate(armatureLocation, humanoid ? yesman.epicfight.model.armature.HumanoidArmature::new : Armature::new);
-                    ((INpcPatchProvider) provider).setArmature(armature.get());
-                    RenderStorage.registerRenderer(key, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
+                MobPatchReloadListener.AbstractMobPatchProvider provider;
+                if (CeNpcPatchOptional.isCeTag(tag)) {
+                    provider = CeNpcPatchOptional.deserializeClient(tag);
+                    if (provider != null && !disabled) {
+                        RenderStorage.registerRenderer(key, tag.getString("renderer"), tag);
+                    }
+                } else {
+                    provider = deserializeMobPatchProvider(tag, true, Minecraft.getInstance().getResourceManager());
+                    if (!disabled) {
+                        Minecraft mc = Minecraft.getInstance();
+                        ResourceLocation armatureLocation = ResourceLocation.parse(tag.getString("armature"));
+                        armatureLocation = ResourceLocation.fromNamespaceAndPath(armatureLocation.getNamespace(), "animmodels/" + armatureLocation.getPath() + ".json");
+                        boolean humanoid = tag.getBoolean("isHumanoid");
+                        AssetAccessor<Armature> armature = Armatures.getOrCreate(armatureLocation, humanoid ? yesman.epicfight.model.armature.HumanoidArmature::new : Armature::new);
+                        ((INpcPatchProvider) provider).setArmature(armature.get());
+                        RenderStorage.registerRenderer(key, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
+                    }
                 }
-                tempProvider.addProvider(key, provider);
-                tempModels.add(key);
+                if (provider != null) {
+                    tempProvider.addProvider(key, provider);
+                    tempModels.add(key);
+                }
             } catch (Exception e) {
                 LOGGER.error("Failed to process synced NPC datapack {}: {}", key != null ? key : "unknown", e.getMessage());
                 if (Minecraft.getInstance().player != null) {
@@ -376,6 +386,29 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
             AVAILABLE_MODELS.addAll(tempModels);
         } else {
             RenderStorage.renderersMap = oldRenderers;
+        }
+
+        // The synced provider table changes immediately, but loaded client NPC capabilities do
+        // not. Refresh them after replacing the table so a reload cannot leave stale motions.
+        if (EpicFightSharedConstants.isPhysicalClient()) {
+            Minecraft.getInstance().execute(() -> {
+                int found = 0;
+                int refreshed = 0;
+                if (Minecraft.getInstance().level != null) {
+                    for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
+                        if (entity instanceof noppes.npcs.entity.EntityNPCInterface npc
+                                && npc.display instanceof com.goodbird.cnpcefaddon.mixin.IDataDisplay display
+                                && display.hasEFModel()) {
+                            found++;
+                            try {
+                                display.refreshEFModel();
+                                refreshed++;
+                            } catch (Throwable t) {
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         EntityPatchProvider.putCustomEntityPatch(CustomEntities.entityCustomNpc, entity -> () -> branchPatchProvider.get(entity));

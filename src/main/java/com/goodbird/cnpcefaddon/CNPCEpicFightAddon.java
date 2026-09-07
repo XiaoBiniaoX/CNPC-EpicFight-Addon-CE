@@ -2,6 +2,7 @@ package com.goodbird.cnpcefaddon;
 
 import com.goodbird.cnpcefaddon.common.AddonConfig;
 import com.goodbird.cnpcefaddon.common.AdvNpcPatchReloader;
+import com.goodbird.cnpcefaddon.common.CeNpcPatchOptional;
 import com.goodbird.cnpcefaddon.common.FactionDamageHandler;
 import com.goodbird.cnpcefaddon.common.LogSuppressor;
 import com.goodbird.cnpcefaddon.common.NpcPatchReloadListener;
@@ -56,14 +57,29 @@ public class CNPCEpicFightAddon {
                 LOGGER.error("Failed to load AdvNpcPatchReloader", e);
             }
         }
+        // CE 是可选依赖。反射注册避免 CE 未安装时解析任何 net.shelmarow 类。
+        if (ModList.get().isLoaded("combat_evolution")) {
+            try {
+                event.addListener((PreparableReloadListener) Class.forName("com.goodbird.cnpcefaddon.common.CeNpcPatchReloader").getConstructor().newInstance());
+            } catch (Exception e) {
+                LOGGER.error("Failed to load CombatEvolution NPC datapack compatibility", e);
+            }
+        }
     }
 
     private void onDatapackSync(OnDatapackSyncEvent event) {
         ServerPlayer player = event.getPlayer();
         SPDatapackSync mobPatchPacket = new SPDatapackSync(NpcPatchReloadListener.TAGMAP.size());
-        for(CompoundTag tag : NpcPatchReloadListener.getDataStream().toList()){
+        var tags = NpcPatchReloadListener.getDataStream().toList();
+        int ceCount = 0;
+        for (CompoundTag tag : tags) {
+            if (CeNpcPatchOptional.isCeTag(tag)) {
+                ceCount++;
+            }
             mobPatchPacket.write(tag);
         }
+        LOGGER.error("[cnpcef-ce-diag] datapackSync player={} total={} ce={}",
+                player == null ? "broadcast" : player.getGameProfile().getName(), tags.size(), ceCount);
         var errors = new java.util.HashMap<>(NpcPatchReloadListener.loadErrors);
         NpcPatchReloadListener.loadErrors.clear();
         if (!errors.isEmpty()) {

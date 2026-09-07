@@ -1,0 +1,231 @@
+{
+
+  "faction": "undead",
+  "renderer": "zombie",
+  "model": "epicfight:entity/biped",
+  "armature": "epicfight:entity/biped",
+  "humanoid": true,
+
+  "chasingSpeed": 1.3,
+  "scale": 1.35,
+  "breakTime": 60,
+  "recoverTime": 90,
+  "staminaRegenDelay": 70,
+  "beParriedDamage": 3,
+  "guardHitImpact": 0.75,
+  "hurtImpact": 0.2,
+
+  "ceBossBar": {
+    "enableBossBar": true,
+    "bossBarName": "CE Test Boss 05",
+    "bossBarTextures": "combat_evolution:textures/gui/bossbar/ce_boss_bar.png"
+  },
+
+  "ceBossMusic": {
+    "playBGM": true,
+    "bgm": "combat_evolution:music.test_bgm",
+    "loop": true,
+    "duration": 3500,
+    "volume": 1,
+    "fadeIn": 40,
+    "fadeOut": 40
+  },
+
+  "attributes": [
+    { "attribute": "minecraft:generic.max_health", "value": 250.0 },
+    { "attribute": "minecraft:generic.attack_damage", "value": 12.0 },
+    { "attribute": "minecraft:generic.armor", "value": 8.0 },
+    { "attribute": "minecraft:generic.armor_toughness", "value": 4.0 },
+    { "attribute": "minecraft:generic.knockback_resistance", "value": 0.5 },
+    { "attribute": "epicfight:staminar", "value": 60 },
+    { "attribute": "epicfight:stamina_regen", "value": 2 },
+    { "attribute": "epicfight:impact", "value": 3.0 },
+    { "attribute": "epicfight:armor_negation", "value": 10.0 },
+    { "attribute": "epicfight:max_strikes", "value": 2 }
+  ],
+
+  "weaponLivingMotions": [
+    {
+       "weaponCategories": ["sword"],
+      "style": "common",
+      "livingMotions": {
+        "idle": "epicfight:biped/living/hold_greatsword",
+        "walk": "epicfight:biped/living/walk_greatsword",
+        "run": "epicfight:biped/living/run_greatsword",
+        "chase": "epicfight:biped/living/run_greatsword",
+        "death": "epicfight:biped/living/death"
+      }
+    }
+  ],
+
+  "guardHitAnimation": [
+    {
+       "weaponCategories": ["sword"],
+      "style": "common",
+      "animations": [
+        "epicfight:biped/skill/guard_sword_hit_active1",
+        "epicfight:biped/skill/guard_sword_hit_active2"
+      ]
+    }
+  ],
+
+  "stunAnimations": {
+    "short": "epicfight:biped/combat/hit_short",
+    "long": "epicfight:biped/combat/hit_long",
+    "hold": "epicfight:biped/combat/hit_short",
+    "fall": "epicfight:biped/living/landing",
+    "knockdown": "epicfight:biped/combat/knockdown",
+    "neutralize": "epicfight:biped/skill/guard_break1"
+  },
+
+  "combatBehaviors": [
+    {
+      "weaponCategories": ["fist"],
+      "style": "common",
+      "behaviorRoots": [
+        {
+          "rootName": "t05_equip_weapon",
+          "priority": 1,
+          "weight": 1,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t05_give_greatsword",
+              "wanderTime": 0,
+              "onBehaviorStart": [
+                 { "onTarget": false, "command": "/item replace entity @s weapon.mainhand with minecraft:diamond_sword" },
+                { "onTarget": false, "command": "/say [T05] auto-equipped greatsword" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+       "weaponCategories": ["sword"],
+      "style": "common",
+
+      "stunEvents": {
+        "short": [{ "onTarget": false, "command": "/say [T05] boss stunned short" }],
+        "long": [{ "onTarget": false, "command": "/say [T05] boss stunned long" }],
+        "knockdown": [{ "onTarget": false, "command": "/say [T05] boss knocked down" }],
+        "neutralize": [{ "onTarget": false, "command": "/say [T05] boss guard broken" }]
+      },
+
+      "behaviorRoots": [
+        {
+          "rootName": "t05_phase_one",
+          "priority": 2,
+          "weight": 3,
+          "maxCooldown": 60,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t05_opener",
+              "stopByStun": 4,
+              "addStamina": 3,
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 5 },
+                { "type": "combat_evolution:health_check", "health": 0.5, "comparator": "greater_ratio_contain" }
+              ],
+               "animation": "epicfight:biped/combat/sword_auto1",
+               "animationParams": {
+                 "transitionTime": 0.2,
+                 "playSpeed": 1.0,
+                "phaseParams": [
+                  {
+                    "phase": -1,
+                    "damageMultiplier": 1.25,
+                    "impactMultiplier": 2.0,
+                    "armorNegationMultiplier": 4.0,
+                    "stunType": "long"
+                  }
+                ]
+              },
+              "nextBehaviors": [
+                {
+                  "behaviorName": "t05_follow_up",
+                  "conditions": [
+                    { "type": "combat_evolution:target_in_distance", "min": 0, "max": 5 }
+                  ],
+                   "animation": "epicfight:biped/combat/sword_auto2",
+                   "setPhase": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t05_phase_two_enraged",
+          "priority": 4,
+          "weight": 4,
+          "maxCooldown": 50,
+          "cooldown": 20,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t05_enraged_dash",
+              "jump": 0.42,
+              "setStamina": 50,
+              "conditions": [
+                { "type": "combat_evolution:health_check", "health": 0.5, "comparator": "less_ratio_contain" },
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 8 }
+              ],
+               "animation": "epicfight:biped/combat/sword_dash",
+              "animationParams": {
+                "transitionTime": 0.1,
+                "playSpeed": 1.2,
+                "phaseParams": [
+                  {
+                    "phase": -1,
+                    "damageMultiplier": 2.0,
+                    "impactMultiplier": 3.0,
+                    "armorNegationMultiplier": 8.0,
+                    "stunType": "knockdown",
+                    "damage_tags": [
+                      "epicfight:bypass_dodge",
+                      "epicfight:guard_puncture"
+                    ]
+                  }
+                ]
+              },
+              "timeEvents": [
+                { "type": "between_times", "timeStart": 0.2, "timeEnd": 0.45, "onTarget": false, "command": "/say [T05] enraged window" }
+              ],
+              "hitEvents": [
+                { "type": "success", "phase": -1, "onTarget": false, "command": "/say [T05] enraged hit" },
+                { "type": "missed", "phase": -1, "onTarget": false, "command": "/say [T05] enraged missed" }
+              ],
+              "blockedEvents": [
+                { "parried": false, "phase": -1, "onTarget": false, "command": "/say [T05] enraged blocked" }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t05_boss_guard",
+          "priority": 1,
+          "weight": 1,
+          "maxCooldown": 120,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t05_guard",
+              "conditions": [
+                { "type": "combat_evolution:attack_level_contain", "levels": [1, 2, 3] }
+              ],
+              "guardTime": 70,
+              "resetGuardTime": true,
+              "guardCost": 0.75,
+              "counterAnimation": "combat_evolution:biped/skill/shield_counter/shield_counter",
+              "counterType": "end",
+              "maxGuardHit": 2,
+              "onGuardHit": [
+                { "onTarget": false, "command": "/say [T05] boss guarded" }
+              ],
+              "onCounterStart": [
+                { "onTarget": false, "command": "/say [T05] boss counter" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

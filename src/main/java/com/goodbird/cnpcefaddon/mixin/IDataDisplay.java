@@ -18,4 +18,7 @@ public interface IDataDisplay {
     String getYsmModel();
 
     boolean hasYsmModel();
+
+    /** Rebinds an already loaded NPC to the provider after a datapack reload. */
+    void refreshEFModel();
 }

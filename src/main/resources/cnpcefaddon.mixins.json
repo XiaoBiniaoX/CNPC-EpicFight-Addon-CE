@@ -22,6 +22,7 @@
     "MixinEntityNpcArmorSlots",
     "MixinEntityNpcInterface",
     "MixinEntityNpcNativeAttack",
+    "MixinEntityNpcCeGoalRestore",
     "MixinEntityAIRangedAttack",
     "MixinEntityAIAttackTarget",
     "MixinDataMelee",
@@ -31,12 +32,16 @@
     "MixinLivingEntityPatchDamage",
     "MixinLivingEntityPatchPlaySync",
     "MixinLivingEntityPatchStun",
+
     "MixinNPCWrapper",
     "MixinServerAnimator"
   ],
   "client": [
     "IMixinRenderEngine",
     "MixinAdvanceHealthBar",
+    "MixinEntityUIDrawDiag",
+
+
     "MixinCustomGuiEntityDisplay",
     "MixinGuiCreationEntities",
     "MixinEntityNPCInvisible",

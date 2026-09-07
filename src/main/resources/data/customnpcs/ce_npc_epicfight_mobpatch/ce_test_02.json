@@ -1,0 +1,184 @@
+{
+
+  "faction": "undead",
+  "renderer": "zombie",
+  "model": "epicfight:entity/biped",
+  "armature": "epicfight:entity/biped",
+  "humanoid": true,
+
+  "chasingSpeed": 1.35,
+  "scale": 1.0,
+  "breakTime": 40,
+  "recoverTime": 60,
+  "staminaRegenDelay": 50,
+  "beParriedDamage": 2,
+  "guardHitImpact": 1,
+  "hurtImpact": 0.35,
+
+  "attributes": [
+    { "attribute": "minecraft:generic.max_health", "value": 80.0 },
+    { "attribute": "minecraft:generic.attack_damage", "value": 8.0 },
+    { "attribute": "epicfight:staminar", "value": 30 },
+    { "attribute": "epicfight:stamina_regen", "value": 1 }
+  ],
+
+  "weaponLivingMotions": [
+    {
+      "weaponCategories": ["longsword"],
+      "style": "common",
+      "livingMotions": {
+        "idle": "epicfight:biped/living/hold_longsword",
+        "walk": "epicfight:biped/living/walk_longsword",
+        "run": "epicfight:biped/living/run_longsword",
+        "chase": "epicfight:biped/living/run_longsword",
+        "death": "epicfight:biped/living/death",
+        "block": "epicfight:biped/skill/guard_longsword"
+      }
+    },
+    {
+      "weaponCategories": ["sword"],
+      "style": "one_hand",
+      "livingMotions": {
+        "idle": "epicfight:biped/living/hold_sword",
+        "walk": "epicfight:biped/living/walk_sword",
+        "chase": "epicfight:biped/living/run_sword"
+      }
+    }
+  ],
+
+  "guardHitAnimation": [
+    {
+      "weaponCategories": ["longsword"],
+      "style": "common",
+      "animations": [
+        "epicfight:biped/skill/guard_longsword_hit_active1",
+        "epicfight:biped/skill/guard_longsword_hit_active2"
+      ]
+    }
+  ],
+
+  "stunAnimations": {
+    "short": "epicfight:biped/combat/hit_short",
+    "long": "epicfight:biped/combat/hit_long",
+    "hold": "epicfight:biped/combat/hit_short",
+    "fall": "epicfight:biped/living/landing",
+    "knockdown": "epicfight:biped/combat/knockdown",
+    "neutralize": "epicfight:biped/skill/guard_break1"
+  },
+
+  "combatBehaviors": [
+    {
+      "weaponCategories": ["longsword", "sword"],
+      "style": "common",
+
+      "stunEvents": {
+        "short": [{ "onTarget": false, "command": "/say [T02] stunEvent short" }],
+        "long": [{ "onTarget": false, "command": "/say [T02] stunEvent long" }],
+        "fall": [{ "onTarget": false, "command": "/say [T02] stunEvent fall" }],
+        "knockdown": [{ "onTarget": false, "command": "/say [T02] stunEvent knockdown" }],
+        "neutralize": [{ "onTarget": false, "command": "/say [T02] stunEvent neutralize" }]
+      },
+
+      "behaviorRoots": [
+        {
+          "rootName": "t02_event_showcase",
+          "priority": 2,
+          "weight": 5,
+          "maxCooldown": 60,
+          "cooldown": 10,
+          "isGlobal": false,
+          "backAfterFinished": false,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t02_phase_attack",
+              "priority": 1,
+              "weight": 4,
+              "stopByStun": 3,
+              "addStamina": 5,
+              "addCoolDown": 10,
+              "waitTime": 5,
+
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 },
+                { "type": "combat_evolution:health_check", "health": 0.2, "comparator": "greater_ratio_contain" },
+                { "type": "combat_evolution:stamina_check", "stamina": 0.1, "comparator": "greater_ratio_contain" },
+                { "type": "combat_evolution:current_angle", "side": "left", "first": 0, "second": 180 },
+                { "type": "epicfight:within_eye_height" }
+              ],
+
+              "animation": "epicfight:biped/combat/longsword_auto1",
+              "animationParams": {
+                "transitionTime": 0.15,
+                "playSpeed": 1.25,
+                "phaseParams": [
+                  {
+                    "phase": -1,
+                    "damageMultiplier": 1.5,
+                    "impactMultiplier": 2.0,
+                    "armorNegationMultiplier": 5.0,
+                    "stunType": "long",
+                    "damage_tags": [
+                      "epicfight:bypass_dodge",
+                      "epicfight:guard_puncture"
+                    ]
+                  }
+                ]
+              },
+
+              "onBehaviorStart": [
+                { "onTarget": false, "command": "/say [T02] onBehaviorStart" }
+              ],
+              "timeEvents": [
+                { "type": "tick", "onTarget": false, "command": "/data get entity @s Health" },
+                { "type": "in_time", "timeStart": 0.25, "onTarget": false, "command": "/say [T02] timeEvent in_time" },
+                { "type": "between_times", "timeStart": 0.3, "timeEnd": 0.5, "onTarget": false, "command": "/say [T02] timeEvent between" }
+              ],
+              "hitEvents": [
+                { "type": "success", "phase": -1, "onTarget": false, "command": "/say [T02] hitEvent success" },
+                { "type": "blocked", "phase": -1, "onTarget": false, "command": "/say [T02] hitEvent blocked" },
+                { "type": "missed", "phase": -1, "onTarget": false, "command": "/say [T02] hitEvent missed" }
+              ],
+              "blockedEvents": [
+                { "parried": false, "phase": -1, "onTarget": false, "command": "/say [T02] blockedEvent blocked" },
+                { "parried": true, "phase": -1, "onTarget": false, "command": "/say [T02] blockedEvent parried" }
+              ],
+              "onHurtEvent": {
+                "returnResult": "default",
+                "damage": -1,
+                "onTarget": false,
+                "command": "/say [T02] onHurtEvent"
+              },
+
+              "nextBehaviors": [
+                {
+                  "behaviorName": "t02_auto2_slow",
+                  "conditions": [
+                    { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 }
+                  ],
+                  "animation": "epicfight:biped/combat/longsword_auto2",
+                  "animationParams": {
+                    "transitionTime": 0.15,
+                    "playSpeed": 0.75,
+                    "phaseParams": [
+                      { "phase": 0, "damageMultiplier": 1.0, "impactMultiplier": 1.25, "stunType": "knockdown" }
+                    ]
+                  },
+                  "nextBehaviors": [
+                    {
+                      "behaviorName": "t02_auto3_finisher",
+                      "conditions": [
+                        { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 }
+                      ],
+                      "animation": "epicfight:biped/combat/longsword_auto3",
+                      "setCoolDown": 30
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

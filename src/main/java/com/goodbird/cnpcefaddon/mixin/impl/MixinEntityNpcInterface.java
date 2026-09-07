@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import noppes.npcs.ai.EntityAIRangedAttack;
 import noppes.npcs.entity.EntityNPCInterface;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -21,13 +22,30 @@ import yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch;
 @Mixin(EntityNPCInterface.class)
 public class MixinEntityNpcInterface extends PathfinderMob {
 
+    @Unique
+    private String cnpcef$lastServerEquipment;
+
     protected MixinEntityNpcInterface(EntityType<? extends PathfinderMob> p_21683_, Level p_21684_) {
         super(p_21683_, p_21684_);
     }
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void cnpcef$keepCrossbowLoaded(CallbackInfo ci) {
-        NpcBowDrawFlow.tickKeepLoaded((EntityNPCInterface) (Object) this);
+        EntityNPCInterface npc = (EntityNPCInterface) (Object) this;
+        NpcBowDrawFlow.tickKeepLoaded(npc);
+
+        // CNPC stores hand items in its custom inventory and sends them through its own
+        // PacketNpcUpdate path. Vanilla equipment tracking therefore does not reliably update
+        // the client-side EF capability after a script/command changes the hand item.
+        if (!npc.level().isClientSide()) {
+            String equipment = npc.getMainHandItem().getItem().toString() + "|"
+                    + npc.getOffhandItem().getItem().toString();
+            if (!equipment.equals(cnpcef$lastServerEquipment)) {
+                cnpcef$lastServerEquipment = equipment;
+                npc.updateClient = true;
+                npc.updateAI = true;
+            }
+        }
     }
 
     @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)

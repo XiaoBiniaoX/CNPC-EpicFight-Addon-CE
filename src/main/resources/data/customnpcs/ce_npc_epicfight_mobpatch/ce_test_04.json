@@ -1,0 +1,186 @@
+{
+
+  "faction": "undead",
+  "renderer": "zombie",
+  "model": "epicfight:entity/biped",
+  "armature": "epicfight:entity/biped",
+  "humanoid": true,
+
+  "chasingSpeed": 1.45,
+  "scale": 1.0,
+  "breakTime": 30,
+  "recoverTime": 50,
+  "staminaRegenDelay": 30,
+  "beParriedDamage": 1,
+  "guardHitImpact": 1,
+  "hurtImpact": 0.4,
+
+  "attributes": [
+    { "attribute": "minecraft:generic.max_health", "value": 70.0 },
+    { "attribute": "minecraft:generic.attack_damage", "value": 9.0 },
+    { "attribute": "minecraft:generic.movement_speed", "value": 0.3 },
+    { "attribute": "epicfight:staminar", "value": 25 },
+    { "attribute": "epicfight:stamina_regen", "value": 2 }
+  ],
+
+  "stunAnimations": {
+    "short": "epicfight:biped/combat/hit_short",
+    "long": "epicfight:biped/combat/hit_long",
+    "hold": "epicfight:biped/combat/hit_short",
+    "fall": "epicfight:biped/living/landing",
+    "knockdown": "epicfight:biped/combat/knockdown",
+    "neutralize": "epicfight:biped/skill/guard_break1"
+  },
+
+  "combatBehaviors": [
+    {
+      "weaponCategories": ["tachi", "sword"],
+      "style": "common",
+      "behaviorRoots": [
+        {
+          "rootName": "t04_global_skill",
+          "isGlobal": true,
+          "backAfterFinished": true,
+          "priority": 5,
+          "weight": 1,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t04_global_phase1",
+              "conditions": [
+                { "type": "combat_evolution:phase_contain", "phases": [1] }
+              ],
+              "animation": "epicfight:biped/skill/rushing_tempo1",
+              "setPhase": 0,
+              "onBehaviorStart": [
+                { "onTarget": false, "command": "/say [T04] global skill inserted (phase1)" }
+              ]
+            },
+            {
+              "behaviorName": "t04_global_phase2",
+              "conditions": [
+                { "type": "combat_evolution:phase_between", "min": 2, "max": 3 }
+              ],
+              "animation": "epicfight:biped/skill/rushing_tempo2",
+              "setPhase": 0,
+              "onBehaviorStart": [
+                { "onTarget": false, "command": "/say [T04] global skill inserted (phase2-3)" }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t04_wander_only",
+          "priority": 1,
+          "weight": 3,
+          "maxCooldown": 40,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t04_strafe",
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 2, "max": 8 }
+              ],
+              "wanderTime": 40,
+              "forward": 0.25,
+              "strafe": 1,
+              "onBehaviorStart": [
+                { "onTarget": false, "command": "/say [T04] wander start" }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t04_guard_with_wander",
+          "priority": 2,
+          "weight": 2,
+          "maxCooldown": 90,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t04_guard_wander",
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 6 }
+              ],
+              "guardWithWander": 80,
+              "guardAnimation": true,
+              "counterAnimation": "epicfight:biped/combat/tachi_auto3",
+              "counterType": "random",
+              "counterChance": 0.2,
+              "forward": 0,
+              "strafe": 1,
+              "onCounterStart": [
+                { "onTarget": false, "command": "/say [T04] guardWithWander counter" }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t04_interruptible_combo",
+          "priority": 3,
+          "weight": 4,
+          "maxCooldown": 70,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t04_auto1",
+              "canInsertGlobalBehavior": true,
+              "allowedGlobalNameList": ["t04_global_skill"],
+              "interruptType": "level",
+              "interruptedWindow": [2, 3],
+              "conditions": [
+                { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 },
+                { "type": "combat_evolution:attack_level", "min": 0, "max": 3 }
+              ],
+              "animation": "epicfight:biped/combat/tachi_auto1",
+              "animationParams": {
+                "transitionTime": 0.15,
+                "playSpeed": 0.9
+              },
+              "hitEvents": [
+                { "type": "success", "phase": -1, "onTarget": false, "command": "/combat_evolution entity @s phase set 1" }
+              ],
+              "nextBehaviors": [
+                {
+                  "behaviorName": "t04_auto2_interrupter",
+                  "canInterruptParent": true,
+                  "interruptType": "time",
+                  "interruptedWindow": [0.2, 0.6],
+                  "conditions": [
+                    { "type": "combat_evolution:target_in_distance", "min": 0, "max": 4 },
+                    { "type": "combat_evolution:attack_level_contain", "levels": [1, 2, 3] }
+                  ],
+                  "animation": "epicfight:biped/combat/tachi_auto2",
+                  "addPhase": 1,
+                  "hitEvents": [
+                    { "type": "success", "phase": -1, "onTarget": false, "command": "/say [T04] auto2 hit, phase+1" }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "rootName": "t04_guard_break_punish",
+          "priority": 4,
+          "weight": 1,
+          "maxCooldown": 60,
+          "firstBehaviors": [
+            {
+              "behaviorName": "t04_punish",
+              "conditions": [
+                { "type": "combat_evolution:target_guard_break" }
+              ],
+              "animation": "epicfight:biped/combat/tachi_auto3",
+              "jump": 0.42,
+              "animationParams": {
+                "phaseParams": [
+                  { "phase": -1, "damageMultiplier": 2.0, "stunType": "knockdown" }
+                ]
+              },
+              "onBehaviorStart": [
+                { "onTarget": false, "command": "/say [T04] punish guard break" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

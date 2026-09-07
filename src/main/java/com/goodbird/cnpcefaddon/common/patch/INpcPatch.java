@@ -19,4 +19,16 @@ public interface INpcPatch {
     default boolean isFightMode() {
         return true;
     }
+
+    /**
+     * Whether the native CustomNPCs melee goal must be suppressed. CE patches only suppress
+     * it while their own CE attack goal is actually installed; this preserves the native
+     * fallback when a CE datapack has no behavior for the held weapon or desire is zero.
+     */
+    default boolean suppressNativeAttack() {
+        return true;
+    }
+
+    default void refreshCombatAI() {
+    }
 }

@@ -22,16 +22,20 @@ public abstract class MixinEntityAIAttackTarget {
             at = @At(
                     value = "INVOKE",
                     target = "Lnoppes/npcs/entity/data/DataMelee;getDelay()I"
-            )
+            ),
+            remap = false
     )
     private int cnpcef$desireAdjustedDelay(DataMelee melee) {
         float desire = ((IDataMeleeAttackDesire) (Object) melee).getAttackDesire();
         int delay = melee.getDelay();
 
-        if (desire <= 0.0F) {
+        // 换算统一走 BattleDesire，保证攻击间隔与伤害/攻速/格挡使用同一套欲望语义。
+        double factor = com.goodbird.cnpcefaddon.common.BattleDesire.attackIntervalFactor(desire);
+
+        if (Double.isInfinite(factor)) {
             return Integer.MAX_VALUE;
         }
 
-        return Math.max(1, (int) Math.round(delay * Math.pow(5.0F / desire, 3.0)));
+        return Math.max(1, (int) Math.round(delay * factor));
     }
 }
