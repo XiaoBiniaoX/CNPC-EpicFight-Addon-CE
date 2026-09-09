@@ -18,8 +18,6 @@ public final class CeNpcPatchProvider extends CEPatchReloadListener.CEDatapackMo
 
     @Override
     public EntityPatch<?> get(Entity entity) {
-        if (entity instanceof net.minecraft.world.entity.Mob mob) {
-        }
         return new CeNpcPatch(this);
     }
 }

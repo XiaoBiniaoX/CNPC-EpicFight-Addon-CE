@@ -33,12 +33,7 @@ public final class BattleDesire {
         try {
             if (entity instanceof EntityNPCInterface npc && npc.stats != null && npc.stats.getMelee() != null) {
                 float raw = ((IDataMeleeAttackDesire) (Object) npc.stats.getMelee()).getAttackDesire();
-                float value = sanitize(raw);
-                // 「欲望无效果」的第一判据：GUI 里设的值是否真的被读到。
-                // raw 恒为 5.0 → NBT 未写入或 mixin 未命中；raw 变化而行为不变 → 换算下游失效。
-                if (entity instanceof net.minecraft.world.entity.Mob mob) {
-                }
-                return value;
+                return sanitize(raw);
             }
         } catch (Throwable ignored) {
             // 缺 mixin / 数据未初始化等情况一律退回默认值

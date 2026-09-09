@@ -10,7 +10,9 @@
     "ICustomMobPatchProvider",
     "MixinAdvancedPatchDamage",
     "MixinAdvancedCombatGoal",
+    "MixinAnimationClipNaNGuard",
     "MixinAnimationEvent",
+    "MixinAttackAnimationSpeed",
     "MixinAttributeMap",
     "MixinCapabilityDispatcher2",
     "MixinCapabilityProvider",
@@ -39,9 +41,6 @@
   "client": [
     "IMixinRenderEngine",
     "MixinAdvanceHealthBar",
-    "MixinEntityUIDrawDiag",
-
-
     "MixinCustomGuiEntityDisplay",
     "MixinGuiCreationEntities",
     "MixinEntityNPCInvisible",
@@ -55,6 +54,7 @@
     "MixinRenderEngineEvents",
     "MixinSkinnedMeshDraw",
     "MixinGuiNpcStats",
+    "MixinGuiNpcDisplayAnimSpeed",
     "MixinTargetIndicator"
   ],
   "minVersion": "0.8"

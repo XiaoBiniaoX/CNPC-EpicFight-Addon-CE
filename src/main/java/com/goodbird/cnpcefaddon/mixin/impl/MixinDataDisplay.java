@@ -1,6 +1,8 @@
 package com.goodbird.cnpcefaddon.mixin.impl;
 
+import com.goodbird.cnpcefaddon.common.AnimSpeedFactor;
 import com.goodbird.cnpcefaddon.common.CapabilityCacheRefresher;
+import com.goodbird.cnpcefaddon.common.CeNpcPatchOptional;
 import com.goodbird.cnpcefaddon.common.patch.NpcHumanoidPatch;
 import com.goodbird.cnpcefaddon.mixin.IAttributeMap;
 import com.goodbird.cnpcefaddon.mixin.IDataDisplay;
@@ -40,6 +42,8 @@ public class MixinDataDisplay implements IDataDisplay {
     private boolean cNPC_EpicFight_Addon$capApplied = false;
     @Unique
     private String cNPC_EpicFight_Addon$ysmModel = null;
+    @Unique
+    private float cNPC_EpicFight_Addon$animSpeedFactor = AnimSpeedFactor.DEFAULT;
 
     @Inject(method = "save", at = @At("HEAD"), remap = false)
     public void writeToNBT(CompoundTag nbttagcompound, CallbackInfoReturnable<CompoundTag> cir) {
@@ -47,6 +51,9 @@ public class MixinDataDisplay implements IDataDisplay {
             nbttagcompound.putString("efModel", cNPC_EpicFight_Addon$efModelResLoc.toString());
         if (hasYsmModel())
             nbttagcompound.putString("cnpcefYsmModel", cNPC_EpicFight_Addon$ysmModel);
+        // 默认值不写盘：旧世界与未调过此项的 NPC 保持原样，NBT 不因本功能增大。
+        if (cNPC_EpicFight_Addon$animSpeedFactor != AnimSpeedFactor.DEFAULT)
+            nbttagcompound.putFloat(AnimSpeedFactor.NBT_KEY, cNPC_EpicFight_Addon$animSpeedFactor);
     }
 
     @Inject(method = "readToNBT", at = @At("HEAD"), remap = false)
@@ -73,13 +80,15 @@ public class MixinDataDisplay implements IDataDisplay {
             String newModel = nbttagcompound.getString("cnpcefYsmModel");
             cNPC_EpicFight_Addon$ysmModel = newModel.isEmpty() ? null : newModel;
         }
+        // 缺字段 = 旧世界/旧 NBT，回落默认 1.0（约法第 9 条）。
+        // 读取走 AnimSpeedFactor.read：字符串型 NBT 与 NaN/无穷都会被挡掉，
+        // 否则 getFloat 会静默返回 0.0 并让动画彻底冻结（踩坑第 9 条）。
+        cNPC_EpicFight_Addon$animSpeedFactor = AnimSpeedFactor.read(nbttagcompound);
     }
 
+    /** GUI 切换 efModel 的入口；服务端侧立即重建 capability 并同步客户端。 */
     @Override
     public void setEFModel(ResourceLocation modelPath, boolean server) {
-        // 这是 GUI 切换 efModel 的真实入口。旧 patch 若为 CE，其 CEBossEvent/BGM
-        // 不在此处清理就会残留 —— 用户报告「切走后 BOSS 血条依然存在」的第一嫌疑。
-        LivingEntityPatch<?> before = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
         cNPC_EpicFight_Addon$efModelResLoc = modelPath;
         cNPC_EpicFight_Addon$capApplied = false;
         if (server) {
@@ -87,7 +96,6 @@ public class MixinDataDisplay implements IDataDisplay {
             cNPC_EpicFight_Addon$capApplied = true;
             npc.updateClient();
         }
-        LivingEntityPatch<?> after = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
     }
 
     @Unique
@@ -118,21 +126,28 @@ public class MixinDataDisplay implements IDataDisplay {
         return cNPC_EpicFight_Addon$ysmModel != null && !cNPC_EpicFight_Addon$ysmModel.isEmpty();
     }
 
+    @Unique
+    public float getAnimSpeedFactor() {
+        return cNPC_EpicFight_Addon$animSpeedFactor;
+    }
+
+    @Override
+    public void setAnimSpeedFactor(float factor) {
+        cNPC_EpicFight_Addon$animSpeedFactor = AnimSpeedFactor.sanitize(factor);
+    }
+
     @Override
     public void refreshEFModel() {
         LivingEntityPatch<?> before = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
         if (!hasEFModel()) {
             return;
         }
-        if (before instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
-            cePatch.clearReloadState();
-        }
+        CeNpcPatchOptional.invokeOnCePatch(before, "clearReloadState");
         // Force a new provider lookup. Reusing the old patch also reuses its CE BossBar,
         // BGM packet UUID, and parsed behavior provider after /reload.
         cNPC_EpicFight_Addon$capApplied = false;
         cNPC_EpicFight_Addon$updateModelCap();
         cNPC_EpicFight_Addon$capApplied = true;
-        LivingEntityPatch<?> after = EpicFightCapabilities.getEntityPatch(npc, LivingEntityPatch.class);
     }
 
     @Unique
@@ -159,34 +174,26 @@ public class MixinDataDisplay implements IDataDisplay {
         // CeNpcPatch）。ce_test_01 → ce_test_05 切换实测被旧判据放过，服务端仍持 01 的
         // provider（无 BossBar/BGM），而客户端已重建为 05（visible=true）→ 双端不一致。
         boolean providerMatches = typeMatches;
-        if (typeMatches
-                && existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch currentCe
-                && expected instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch expectedCe) {
-            providerMatches = currentCe.getNpcProvider() == expectedCe.getNpcProvider();
-        }
-        if (existing != null && cNPC_EpicFight_Addon$capApplied && !providerMatches) {
+        if (typeMatches && CeNpcPatchOptional.isCePatch(existing)) {
+            providerMatches = CeNpcPatchOptional.sameCeProvider(existing, expected);
         }
         if (existing != null && cNPC_EpicFight_Addon$capApplied && providerMatches) {
             if (existing instanceof HumanoidMobPatch<?> humanoid) {
                 humanoid.setAIAsInfantry(npc.getMainHandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem);
             }
             // CE patch 不是 HumanoidMobPatch 的子类，其行为树 Goal 只在 initAI 内挂载。
-            if (existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
-                cePatch.initAI();
-            }
+            CeNpcPatchOptional.invokeOnCePatch(existing, "initAI");
             if (npc.level().isClientSide() && existing instanceof NpcHumanoidPatch<?> npcPatch) {
                 npcPatch.applyWeaponLivingMotions();
             }
-            if (npc.level().isClientSide() && existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
-                cePatch.applyCeLivingMotions();
+            if (npc.level().isClientSide()) {
+                CeNpcPatchOptional.invokeOnCePatch(existing, "applyCeLivingMotions");
             }
             return;
         }
 
         // 重建前清掉旧 CE patch 的 BossBar 玩家与 BGM，否则换型后旧血条/旧音乐仍挂在客户端。
-        if (existing instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch oldCePatch) {
-            oldCePatch.clearReloadState();
-        }
+        CeNpcPatchOptional.invokeOnCePatch(existing, "clearReloadState");
 
         EntityPatchProvider newProvider = expectedProvider;
         if (newProvider.get() == null) return;
@@ -202,18 +209,16 @@ public class MixinDataDisplay implements IDataDisplay {
         // CNPC swaps this capability after the entity already joined its level. CE puts its
         // datapack attributes (staminar/stamina_regen included) in onAddedToWorld(), so the
         // normal Forge lifecycle has already passed and must be replayed for CE only.
-        if (newProvider.get() instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
-            cePatch.onAddedToWorld();
-            // CE 的行为树 Goal 只在 initAI 内挂载，且必须在属性注入之后：
-            // getCustomWeaponMotionBuilder 依赖手持武器 capability 与已注入的属性。
-            // 缺这一步 NPC 没有 CEAnimationAttackGoal，既不出刀光也不造成伤害。
-            cePatch.initAI();
-        }
+        CeNpcPatchOptional.invokeOnCePatch(newProvider.get(), "onAddedToWorld");
+        // CE 的行为树 Goal 只在 initAI 内挂载，且必须在属性注入之后：
+        // getCustomWeaponMotionBuilder 依赖手持武器 capability 与已注入的属性。
+        // 缺这一步 NPC 没有 CEAnimationAttackGoal，既不出刀光也不造成伤害。
+        CeNpcPatchOptional.invokeOnCePatch(newProvider.get(), "initAI");
         if (npc.level().isClientSide() && newProvider.get() instanceof NpcHumanoidPatch<?> npcPatch) {
             npcPatch.applyWeaponLivingMotions();
         }
-        if (npc.level().isClientSide() && newProvider.get() instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch cePatch) {
-            cePatch.applyCeLivingMotions();
+        if (npc.level().isClientSide()) {
+            CeNpcPatchOptional.invokeOnCePatch(newProvider.get(), "applyCeLivingMotions");
         }
         if (newProvider.hasCapability()) {
             boolean hasFoundAny = false;

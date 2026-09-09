@@ -86,16 +86,6 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         this.initAI();
     }
 
-    /**
-     * 纯取证覆写：CE 的 {@code onAddedToWorld} 是 {@code initBossBar()} 的唯一调用点，
-     * 也是 {@code ceBossEvent.setVisible(provider.enableBossBar)} 的唯一来源。
-     * CNPC 运行时换 capability，此处是否被调用直接决定 BossBar/BGM 能否工作。
-     */
-    @Override
-    public void onAddedToWorld() {
-        super.onAddedToWorld();
-    }
-
     @Override
     public void onStartTracking(ServerPlayer player) {
         super.onStartTracking(player);
@@ -236,7 +226,6 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
             addLivingMotionIfMissing(LivingMotions.MOUNT, Animations.BIPED_MOUNT);
             addLivingMotionIfMissing(LivingMotions.DEATH, Animations.BIPED_DEATH);
             addLivingMotionIfMissing(LivingMotions.BLOCK, Animations.SWORD_GUARD);
-            // 修 A 的验收判据：确认 BLOCK 在 CE 的 resetLivingAnimations 之后被补回。
             livingMotionKey = newKey;
             syncCeLivingMotions();
         } catch (Throwable ignored) {
@@ -285,7 +274,7 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
     private boolean hasMissingBaseLivingMotion() {
         // BLOCK 必须纳入：CE 的 modifyLivingMotionByCurrentItem 在 hasChange||forceChange 时
         // 执行 resetLivingAnimations() 后只重装 newLivingAnimations，而数据包多数不配 BLOCK
-        // → BLOCK 映射被清空（实测 guard:sync blockMapped=false）。
+        // → BLOCK 映射被清空。
         // 该 reset 也可能由 CE 自己的 onStartTracking(forceChange=true) 触发，此时
         // livingMotionKey 未变，若不把 BLOCK 计入缺失判定就永远不会补回来 → 格挡动画永久丢失。
         return !hasLivingMotionMapping(LivingMotions.BLOCK)
@@ -329,20 +318,8 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         var capability = this.getAdvancedHoldingItemCapability(hand);
         boolean fist = capability.getWeaponCategory()
                 == yesman.epicfight.world.capabilities.item.CapabilityItem.WeaponCategories.FIST;
-        net.minecraft.sounds.SoundEvent result = fist
-                ? super.getWeaponHitSound(hand)
-                : EpicFightSounds.BLADE_HIT.get();
-        // 用户报「所有 JSON 都只有挥剑声、没有打击声」。此处是否被调用是第一判据：
-        // 若一条都没有，说明 CE 的命中根本没走 AttackAnimation 的 hitSound 分支。
-        return result;
-    }
-
-    @Override
-    public net.minecraft.sounds.SoundEvent getSwingSound(net.minecraft.world.InteractionHand hand) {
-        net.minecraft.sounds.SoundEvent result = super.getSwingSound(hand);
-        // 对照组：挥剑声用户说「有」。若本条有记录而 weaponHitSound 一条都没有，
-        // 即证明命中音效链路在 dealtDamage 判定之前就断了。
-        return result;
+        // 空手沿用 CE/EF 默认音效，持械统一用刀刃命中声。
+        return fist ? super.getWeaponHitSound(hand) : EpicFightSounds.BLADE_HIT.get();
     }
 
     @Override
@@ -466,9 +443,6 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
     @Override
     public void onGuardHit(net.minecraft.world.damagesource.DamageSource damageSource) {
         super.onGuardHit(damageSource);
-        // 用户报「明明能格挡但没动画」→ 本方法被调用即证明格挡判定确实生效，
-        // 此时记录服务端 guard 标志，与客户端 guard:sync 的 isGuard 对照即可判断是
-        // 「服务端未置位」还是「置位了但没同步到客户端」。
 
         try {
             float desire = com.goodbird.cnpcefaddon.common.BattleDesire.of(this.original);
@@ -550,41 +524,14 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         clearStaleGuardState();
         syncClientGuardAnimation();
         advanceShortCounter();
-        // 客户端侧也采样：定位「行为树在跑但没有任何动画」是否为客户端动画层未接管。
-        var target = this.getTarget();
-        if (target == null && !this.original.level().isClientSide()) {
+        // 服务端无目标时无需再算防御时长；客户端始终执行，以便本地解除残留的格挡状态。
+        if (this.getTarget() == null && !this.original.level().isClientSide()) {
             return;
         }
-        // 上一轮 240 条 tick 全是 running=false canUse=false currentBehavior=null，
-        // 但没有区分「Goal 不在 goalSelector 里」与「在但 canUse 为假」。补上 goalPresent。
-        String goalNames = "goalPresent=false";
-        try {
-            for (var w : this.original.goalSelector.getAvailableGoals()) {
-                if (w.getGoal() instanceof net.shelmarow.combat_evolution.ai.goal.CEAnimationAttackGoal<?> g) {
-                    goalNames = "goalPresent=true running=" + w.isRunning()
-                            + " canUse=" + g.canUse()
-                            + " currentBehavior=" + (g.getCombatBehaviors().getCurrentBehavior() == null ? "null" : "yes");
-                }
-            }
-        } catch (Throwable t) {
-            goalNames = "probe failed: " + t;
-        }
         applyLongGuardDesire();
-
-        String anim = "?";
-        try {
-            var player = this.getAnimator().getPlayerFor(null);
-            anim = String.valueOf(player.getAnimation().get())
-                    + " isEnd=" + player.isEnd()
-                    + " motion=" + this.currentLivingMotion;
-        } catch (Throwable t) {
-            anim = "probe failed: " + t;
-        }
     }
 
     private void ensureBossBarTracking() {
-        // 每个早退分支单独记账：只有这样才能区分「没执行」与「执行了但被某个条件挡住」。
-        // 踩坑第 25 条：诊断 0 命中必须能定位到是哪一条早退。
         if (this.original.level().isClientSide()) {
             return;
         }
@@ -598,8 +545,6 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         double range = 64.0D * 64.0D;
         boolean hasTarget = this.getTarget() != null;
         if (!hasTarget) {
-            if (!musicSyncedPlayers.isEmpty()) {
-            }
             musicSyncedPlayers.clear();
         }
         for (ServerPlayer player : level.players()) {
@@ -619,15 +564,6 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         }
     }
 
-    private String safeAttackSpeed() {
-        try {
-            var attribute = this.original.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
-            return attribute == null ? "missing" : Float.toString((float) attribute.getValue());
-        } catch (Throwable ignored) {
-            return "error";
-        }
-    }
-
     private void syncClientGuardAnimation() {
         if (!this.isLogicalClient()) {
             return;
@@ -636,9 +572,6 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         boolean guarding = CEPatchUtils.isGuard(this) && !CEPatchUtils.isInCounter(this);
         AssetAccessor<? extends StaticAnimation> guard = this.getAnimator()
                 .getLivingAnimation(LivingMotions.BLOCK, Animations.SWORD_GUARD);
-        // 逐要素记账：guarding 为假 / guard 映射为 null / 当前动画已是 guard，是三种完全
-        // 不同的失败原因，必须能区分（踩坑第 29 条：别只采一个汇总布尔）。
-        // 特别注意 isGuard 是 CE 的同步字段，客户端为假可能是「服务端没置位」也可能是「没同步过来」。
 
         if (!guarding) {
             if (clientGuardState && guard != null) {
@@ -663,39 +596,13 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         var idle = this.getAnimator().getLivingAnimation(LivingMotions.IDLE, Animations.BIPED_IDLE);
         boolean alreadyGuard = current == guard;
         boolean canReplace = current == idle || player.isEnd();
+        // 基础层若正播别的未结束动画（受击、CE 反击、攻击连段），本帧不抢占，下一帧再试。
         if (!alreadyGuard && canReplace) {
             this.getAnimator().playAnimation(guard, 0.0F);
-        } else if (!alreadyGuard) {
-            // 真正的失败现场：guard 状态成立、当前不是 guard 动画，却因基础层被别的
-            // 未结束动画占住而跳过播放。记录占位动画名以定位是哪一类（受击 hit_short /
-            // CE counter / 攻击连段等）。踩坑第 50 条：先取证，不改播放逻辑。
         }
-        // 注意：此处 clientGuardState 一直是无条件置 true 的，即使上面没播成功。
-        // 故它**不能**作为「动画是否播上」的判据（此前 37% 统计正是被它误导）。
-        // 保留原语义不动（改它会影响 !guarding 分支的 stopPlaying），
-        // 真实播放结果一律以 guard:blocked 是否出现为准。
+        // clientGuardState 表示「格挡状态成立」，不表示动画已播上；
+        // !guarding 分支依赖它来决定是否 stopPlaying，故此处无条件置 true。
         clientGuardState = true;
-    }
-
-    /**
-     * 诊断用：取动画的可读名，拿不到时退回类名，绝不抛异常。
-     *
-     * <p>注意 {@code getRealAnimation()} 返回的是
-     * {@code AssetAccessor<? extends StaticAnimation>}（javap 已核），不是动画本身，
-     * 必须先 {@code get()} 再取 {@code getRegistryName()}。
-     */
-    private String describeAnimation(AssetAccessor<? extends StaticAnimation> accessor) {
-        if (accessor == null) {
-            return "null";
-        }
-        try {
-            if (accessor.isEmpty()) {
-                return "empty";
-            }
-            return String.valueOf(accessor.get().getRegistryName());
-        } catch (Throwable ignored) {
-            return accessor.getClass().getSimpleName();
-        }
     }
 
     private void finishBehavior(CEAnimationAttackGoal<?> goal, CECombatBehaviors.Behavior<?> behavior) {

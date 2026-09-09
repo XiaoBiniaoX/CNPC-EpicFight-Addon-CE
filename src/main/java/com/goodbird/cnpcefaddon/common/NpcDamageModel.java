@@ -66,7 +66,11 @@ public final class NpcDamageModel {
         // 故对 CE patch 一律让位，交回 CE/EF 自己的结算结果。
         // 旧三种 patch 口味（NpcHumanoidPatch / AdvNpcPatch / NpcPatch）行为完全不变，
         // 旧数据包与 AddonConfig 的两个系数继续生效（约法第 9 条）。
-        if (patch instanceof com.goodbird.cnpcefaddon.common.patch.CeNpcPatch) {
+        //
+        // 这里必须按类名判定：本方法在每次 EF NPC 近战命中时都会执行到这一行，
+        // 而 instanceof CeNpcPatch 会解析其 CE 超类，CE 未安装时直接抛 NoClassDefFoundError
+        // （见 CeNpcPatchOptional.isCePatch 的说明）。
+        if (CeNpcPatchOptional.isCePatch(patch)) {
             return modifiedDamage;
         }
 

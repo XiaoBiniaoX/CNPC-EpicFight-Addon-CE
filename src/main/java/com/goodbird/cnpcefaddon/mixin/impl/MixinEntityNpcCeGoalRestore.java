@@ -28,9 +28,6 @@ public abstract class MixinEntityNpcCeGoalRestore {
     private void cnpcef$restoreCeGoals(CallbackInfo ci) {
         EntityNPCInterface npc = (EntityNPCInterface) (Object) this;
 
-        // 采样点必须在 refreshCombatAI() 之后：CNPC 的 updateTasks 刚清过 goalSelector，
-        // 在恢复之前采样必然是「没有 CE Goal」，据此判断恢复失败是错的（踩坑第 29 条）。
-
         if (npc.isKilled()) {
             return;
         }
@@ -41,8 +38,8 @@ public abstract class MixinEntityNpcCeGoalRestore {
             if (patch instanceof INpcPatch npcPatch) {
                 npcPatch.refreshCombatAI();
             }
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
+            // patch 缺失或 CE 未装时保持 CNPC 原生 AI
         }
-
     }
 }

@@ -19,6 +19,15 @@ public interface IDataDisplay {
 
     boolean hasYsmModel();
 
+    /**
+     * 本 NPC 的动画攻击速度倍率，范围 {@code [0.01, 10.0]}，默认 {@code 1.0}。
+     * <p>
+     * 与数据包 {@code play_speed} 相乘而非替换：数据包写 6.0、此处填 2.0 时实际为 12.0。
+     */
+    float getAnimSpeedFactor();
+
+    void setAnimSpeedFactor(float factor);
+
     /** Rebinds an already loaded NPC to the provider after a datapack reload. */
     void refreshEFModel();
 }

@@ -71,15 +71,9 @@ public class CNPCEpicFightAddon {
         ServerPlayer player = event.getPlayer();
         SPDatapackSync mobPatchPacket = new SPDatapackSync(NpcPatchReloadListener.TAGMAP.size());
         var tags = NpcPatchReloadListener.getDataStream().toList();
-        int ceCount = 0;
         for (CompoundTag tag : tags) {
-            if (CeNpcPatchOptional.isCeTag(tag)) {
-                ceCount++;
-            }
             mobPatchPacket.write(tag);
         }
-        LOGGER.error("[cnpcef-ce-diag] datapackSync player={} total={} ce={}",
-                player == null ? "broadcast" : player.getGameProfile().getName(), tags.size(), ceCount);
         var errors = new java.util.HashMap<>(NpcPatchReloadListener.loadErrors);
         NpcPatchReloadListener.loadErrors.clear();
         if (!errors.isEmpty()) {
