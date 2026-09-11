@@ -65,6 +65,9 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
      */
     private static final Set<ResourceLocation> OWNED_KEYS = new HashSet<>();
 
+    /** 本 listener 在共享注册表里的归属标记。 */
+    public static final String OWNER = "advanced";
+
     static {
         // Custom weapon categories / styles from optional addon mods (e.g. the
         // Dawnday's DawnDayWeaponCategories, epicfightx's EFXStyles and EFN mod's
@@ -108,9 +111,12 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         // shared registries also hold NpcPatchReloadListener's data, which must survive.
         for (ResourceLocation owned : OWNED_KEYS) {
             PlaySpeedCache.clear(owned);
-            NpcPatchReloadListener.branchPatchProvider.removeProvider(owned);
-            NpcPatchReloadListener.AVAILABLE_MODELS.remove(owned);
-            NpcPatchReloadListener.TAGMAP.remove(owned);
+            // 定向撤回：该键若已被别的 reloader 覆盖，则当前值不属于自己，不能删
+            // （旧的按键删除会把他人条目一起删掉，见 NpcBranchPatchProvider 的 owner 说明）。
+            if (NpcPatchReloadListener.branchPatchProvider.removeProviderIfOwnedBy(owned, OWNER)) {
+                NpcPatchReloadListener.AVAILABLE_MODELS.remove(owned);
+                NpcPatchReloadListener.TAGMAP.remove(owned);
+            }
         }
         OWNED_KEYS.clear();
 
@@ -176,7 +182,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         }
 
         for (var p : tempProviders) {
-            NpcPatchReloadListener.branchPatchProvider.addProvider(p.getFirst().resourceLocation, p.getSecond());
+            NpcPatchReloadListener.branchPatchProvider.addProvider(p.getFirst().resourceLocation, p.getSecond(), OWNER);
         }
         NpcPatchReloadListener.AVAILABLE_MODELS.addAll(tempModels);
         NpcPatchReloadListener.TAGMAP.putAll(tempTags);

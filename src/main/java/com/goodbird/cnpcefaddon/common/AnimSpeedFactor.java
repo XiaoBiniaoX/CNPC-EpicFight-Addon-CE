@@ -82,4 +82,34 @@ public final class AnimSpeedFactor {
         }
         return ((IDataDisplay) npc.display).getAnimSpeedFactor();
     }
+
+    /**
+     * 攻击动画速度的总倍率 = 战斗欲望系数 × 文本框 A。
+     *
+     * <p>与数据包 {@code play_speed} 仍是相乘关系（EF 在 {@code AnimationPlayer:36} 另行应用
+     * PLAY_SPEED_MODIFIER），故最终为 {@code play_speed × 欲望系数 × 文本框A}。
+     *
+     * <p>两项默认值都恰好为 1：欲望默认 5.0 → {@link BattleDesire#attackSpeedFactor} 返回 1.0，
+     * 文本框默认 1.0。因此未调过这两项的 NPC、旧世界与旧数据包行为完全不变（约法第 9 条）。
+     *
+     * <p>欲望对应关系：0.0 → ×0.5（半速）、5.0 → ×1.0（不变）、10.0 → ×1.5。
+     *
+     * <p><b>只作用于攻击动画</b>：调用点是 {@code AttackAnimation.getPlaySpeed}，
+     * 待机 / 行走 / 格挡等 living 动画不经过该方法，不受影响。
+     */
+    public static float attackAnimationSpeed(Entity entity) {
+        if (!(entity instanceof EntityNPCInterface npc) || npc.display == null) {
+            return DEFAULT;
+        }
+        float desireFactor = BattleDesire.attackSpeedFactor(BattleDesire.of(npc));
+        return sanitizeTotal(desireFactor * ((IDataDisplay) npc.display).getAnimSpeedFactor());
+    }
+
+    /**
+     * 总倍率的兜底：只挡非有限值与非正数，不按 {@link #MAX} 钳制 ——
+     * 欲望 1.5 与文本框 10.0 相乘本就应得到 15.0，那是两项各自在合法范围内的正常结果。
+     */
+    private static float sanitizeTotal(float raw) {
+        return Float.isFinite(raw) && raw > 0.0F ? raw : DEFAULT;
+    }
 }

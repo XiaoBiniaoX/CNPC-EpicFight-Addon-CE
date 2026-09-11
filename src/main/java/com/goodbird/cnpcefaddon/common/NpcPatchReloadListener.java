@@ -67,6 +67,12 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
     private static final Gson GSON = (new GsonBuilder()).create();
     private static final Logger LOGGER = LoggerFactory.getLogger(NpcPatchReloadListener.class);
 
+    /** 本 listener 在共享注册表里的归属标记，见 {@link NpcBranchPatchProvider#getOwner}。 */
+    public static final String OWNER = "normal";
+
+    /** 单轮刷新最多打这么多条失败详情，其余汇总一条。 */
+    private static final int REBIND_ERROR_LOG_LIMIT = 5;
+
     public static final NpcBranchPatchProvider branchPatchProvider = new NpcBranchPatchProvider();
     public static final Set<ResourceLocation> AVAILABLE_MODELS = new HashSet<>();
     public static final Map<ResourceLocation, CompoundTag> TAGMAP = Maps.newHashMap();
@@ -160,7 +166,9 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         }
 
         if (!tempModels.isEmpty()) {
-            branchPatchProvider.resetProviders(tempProvider.getProviders());
+            // 本 listener 先跑并整体重建，故这批条目的归属统一记为 OWNER；随后 Adv / CE
+            // 两个 listener 只能撤回自己 owner 的键（NpcBranchPatchProvider 的 owner 判据）。
+            branchPatchProvider.resetProviders(tempProvider.getProviders(), OWNER);
             AVAILABLE_MODELS.clear();
             AVAILABLE_MODELS.addAll(tempModels);
             TAGMAP.clear();
@@ -242,6 +250,18 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
 
     public static Stream<CompoundTag> getDataStream() {
         return TAGMAP.values().stream();
+    }
+
+    /**
+     * 同步条目的归属：CE 用自己的 marker（{@code cnpcefPatchType}），其余看
+     * {@code patchType}（{@code ADVANCED} / {@code NORMAL}）。旧版本同步包没有
+     * {@code patchType} 时回落普通归属，与旧行为一致。
+     */
+    private static String ownerOfSyncedTag(CompoundTag tag) {
+        if (CeNpcPatchOptional.isCeTag(tag)) {
+            return CeNpcPatchOptional.PATCH_TYPE;
+        }
+        return "ADVANCED".equals(tag.getString("patchType")) ? "advanced" : OWNER;
     }
 
     /**
@@ -367,7 +387,9 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                     }
                 }
                 if (provider != null) {
-                    tempProvider.addProvider(key, provider);
+                    // 客户端同步表一次收到三类条目，按 tag 自带的 patchType 标注归属，
+                    // 与服务端侧 owner 语义保持一致（CE 用专用 marker，其余看 patchType）。
+                    tempProvider.addProvider(key, provider, ownerOfSyncedTag(tag));
                     tempModels.add(key);
                 }
             } catch (Exception e) {
@@ -381,7 +403,13 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         }
 
         if (!tempModels.isEmpty()) {
-            branchPatchProvider.resetProviders(tempProvider.getProviders());
+            // 逐条搬运而非整体 reset：同步表混合普通 / 高级 / CE 三类，
+            // reset 会把所有条目按单一 owner 标注，之后 Adv/CE 的定向撤回就会失效。
+            branchPatchProvider.clear();
+            for (var pair : tempProvider.getProviders()) {
+                ResourceLocation key = pair.getFirst().resourceLocation;
+                branchPatchProvider.addProvider(key, pair.getSecond(), tempProvider.getOwner(key));
+            }
             AVAILABLE_MODELS.clear();
             AVAILABLE_MODELS.addAll(tempModels);
         } else {
@@ -392,21 +420,29 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         // not. Refresh them after replacing the table so a reload cannot leave stale motions.
         if (EpicFightSharedConstants.isPhysicalClient()) {
             Minecraft.getInstance().execute(() -> {
-                int found = 0;
-                int refreshed = 0;
+                int failed = 0;
                 if (Minecraft.getInstance().level != null) {
                     for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
                         if (entity instanceof noppes.npcs.entity.EntityNPCInterface npc
                                 && npc.display instanceof com.goodbird.cnpcefaddon.mixin.IDataDisplay display
                                 && display.hasEFModel()) {
-                            found++;
                             try {
                                 display.refreshEFModel();
-                                refreshed++;
                             } catch (Throwable t) {
+                                // 与服务端侧同理：刷新失败会让客户端 patch 与同步表脱节
+                                // （表现为动画/渲染与服务端不一致），不能静默。单个失败不中断整轮。
+                                failed++;
+                                if (failed <= REBIND_ERROR_LOG_LIMIT) {
+                                    LOGGER.error("Failed to rebind synced patch for NPC {} (efModel {})",
+                                            npc.getUUID(), display.getEFModel(), t);
+                                }
                             }
                         }
                     }
+                }
+                if (failed > REBIND_ERROR_LOG_LIMIT) {
+                    LOGGER.error("Synced patch rebind failed on {} more NPCs (log limited to {} entries)",
+                            failed - REBIND_ERROR_LOG_LIMIT, REBIND_ERROR_LOG_LIMIT);
                 }
             });
         }

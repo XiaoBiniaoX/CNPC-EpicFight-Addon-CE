@@ -16,6 +16,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import noppes.npcs.entity.EntityNPCInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.shelmarow.combat_evolution.ai.CEPatchReloadListener;
 import yesman.epicfight.api.data.reloader.MobPatchReloadListener;
 import yesman.epicfight.api.asset.AssetAccessor;
@@ -38,6 +40,12 @@ import java.util.Set;
 public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
     public static final String DIRECTORY = "ce_npc_epicfight_mobpatch";
     public static final String PATCH_TYPE = "COMBAT_EVOLUTION";
+    /** 本 listener 在共享注册表里的归属标记，与 {@link CeNpcPatchOptional#PATCH_TYPE} 一致。 */
+    public static final String OWNER = PATCH_TYPE;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CeNpcPatchReloader.class);
+    /** 单轮重绑定最多打这么多条失败详情，其余汇总一条，避免大量 NPC 同时失败时刷屏。 */
+    private static final int REBIND_ERROR_LOG_LIMIT = 5;
     private static final Gson GSON = new GsonBuilder().create();
     private static final Set<ResourceLocation> OWNED_KEYS = new HashSet<>();
 
@@ -47,14 +55,14 @@ public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
 
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> entries, ResourceManager resourceManager, ProfilerFiller profiler) {
-        // NpcPatchReloadListener has rebuilt its normal entries first. Remove only CE entries from
-        // the prior reload, then append the successfully parsed CE entries without touching old packs.
-        for (ResourceLocation key : OWNED_KEYS) {
-            NpcPatchReloadListener.branchPatchProvider.removeProvider(key);
-            NpcPatchReloadListener.AVAILABLE_MODELS.remove(key);
-            NpcPatchReloadListener.TAGMAP.remove(key);
-        }
-        OWNED_KEYS.clear();
+        // 两阶段提交：先把本轮全部条目解析进临时表，只有解析成功的键才在第二阶段换入共享注册表。
+        //
+        // 旧实现是「先按 OWNED_KEYS 删掉上一轮的 CE 条目，再逐条解析并逐条写回」，于是任何一条
+        // 解析失败（JSON/NBT、armature 非法、CE 字段解析器抛错、渲染器注册抛错）都会让那个键
+        // 在本轮彻底消失——旧配置已删、新配置没进来，且没有回滚。改为暂存后整体换入，
+        // 失败键保留上一轮的有效条目，只记错误。
+        Map<ResourceLocation, CeNpcPatchProvider> parsedProviders = new HashMap<>();
+        Map<ResourceLocation, CompoundTag> parsedTags = new HashMap<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : entries.entrySet()) {
             try {
@@ -81,13 +89,33 @@ public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
                             entry.getKey(), tag.getString("renderer"), syncTag);
                 }
 
-                NpcPatchReloadListener.branchPatchProvider.addProvider(entry.getKey(), provider);
-                NpcPatchReloadListener.AVAILABLE_MODELS.add(entry.getKey());
-                NpcPatchReloadListener.TAGMAP.put(entry.getKey(), syncTag);
-                OWNED_KEYS.add(entry.getKey());
+                parsedProviders.put(entry.getKey(), provider);
+                parsedTags.put(entry.getKey(), syncTag);
             } catch (Exception e) {
+                LOGGER.error("Failed to load CE NPC EpicFight mobpatch for {}: {}", entry.getKey(), describeError(e));
                 NpcPatchReloadListener.loadErrors.put(entry.getKey(), describeError(e));
             }
+        }
+
+        // 第二阶段：撤回上一轮仍归本 listener 的键（定向撤回，不碰别的 reloader 后写的同名条目），
+        // 再换入本轮解析成功的条目。解析失败的键不在 parsedProviders 里，其上一轮条目保持有效。
+        for (ResourceLocation key : OWNED_KEYS) {
+            if (parsedProviders.containsKey(key)) {
+                continue;
+            }
+            if (NpcPatchReloadListener.branchPatchProvider.removeProviderIfOwnedBy(key, OWNER)) {
+                NpcPatchReloadListener.AVAILABLE_MODELS.remove(key);
+                NpcPatchReloadListener.TAGMAP.remove(key);
+            }
+        }
+        OWNED_KEYS.clear();
+
+        for (Map.Entry<ResourceLocation, CeNpcPatchProvider> parsed : parsedProviders.entrySet()) {
+            ResourceLocation key = parsed.getKey();
+            NpcPatchReloadListener.branchPatchProvider.addProvider(key, parsed.getValue(), OWNER);
+            NpcPatchReloadListener.AVAILABLE_MODELS.add(key);
+            NpcPatchReloadListener.TAGMAP.put(key, parsedTags.get(key));
+            OWNED_KEYS.add(key);
         }
 
         // Existing CNPCs keep the old patch instance across a resource reload. Rebind them on
@@ -96,18 +124,28 @@ public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             server.execute(() -> {
-                int[] stats = new int[2];
+                int[] failed = new int[1];
                 server.getAllLevels().forEach(level -> level.getAllEntities().forEach(entity -> {
                     if (entity instanceof EntityNPCInterface npc && npc.display instanceof com.goodbird.cnpcefaddon.mixin.IDataDisplay display
                             && display.hasEFModel()) {
-                        stats[0]++;
                         try {
                             display.refreshEFModel();
-                            stats[1]++;
                         } catch (Throwable t) {
+                            // 旧实现整条吞掉：重绑定会改属性、AI、BossBar/BGM 与 capability，
+                            // 失败后实体可能半初始化，而日志里没有任何线索。至少留一条可定位的记录。
+                            // 仍不 rethrow：一个坏 NPC 不能中断整轮刷新。
+                            failed[0]++;
+                            if (failed[0] <= REBIND_ERROR_LOG_LIMIT) {
+                                LOGGER.error("Failed to rebind CE patch for NPC {} (efModel {})",
+                                        npc.getUUID(), display.getEFModel(), t);
+                            }
                         }
                     }
                 }));
+                if (failed[0] > REBIND_ERROR_LOG_LIMIT) {
+                    LOGGER.error("CE patch rebind failed on {} more NPCs (log limited to {} entries)",
+                            failed[0] - REBIND_ERROR_LOG_LIMIT, REBIND_ERROR_LOG_LIMIT);
+                }
             });
         }
     }

@@ -3,6 +3,7 @@ package com.goodbird.cnpcefaddon.mixin.impl;
 import com.goodbird.cnpcefaddon.common.AnimSpeedFactor;
 import com.goodbird.cnpcefaddon.common.CapabilityCacheRefresher;
 import com.goodbird.cnpcefaddon.common.CeNpcPatchOptional;
+import com.goodbird.cnpcefaddon.common.patch.INpcPatch;
 import com.goodbird.cnpcefaddon.common.patch.NpcHumanoidPatch;
 import com.goodbird.cnpcefaddon.mixin.IAttributeMap;
 import com.goodbird.cnpcefaddon.mixin.IDataDisplay;
@@ -64,8 +65,7 @@ public class MixinDataDisplay implements IDataDisplay {
             cNPC_EpicFight_Addon$efModelResLoc = newModel;
             if (changed || !cNPC_EpicFight_Addon$capApplied) {
                 try {
-                    cNPC_EpicFight_Addon$updateModelCap();
-                    cNPC_EpicFight_Addon$capApplied = true;
+                    cNPC_EpicFight_Addon$capApplied = cNPC_EpicFight_Addon$updateModelCap();
                 } catch (Exception e) {
                     LOGGER.error("[cnpcefaddon] updateModelCap failed", e);
                 }
@@ -92,8 +92,7 @@ public class MixinDataDisplay implements IDataDisplay {
         cNPC_EpicFight_Addon$efModelResLoc = modelPath;
         cNPC_EpicFight_Addon$capApplied = false;
         if (server) {
-            cNPC_EpicFight_Addon$updateModelCap();
-            cNPC_EpicFight_Addon$capApplied = true;
+            cNPC_EpicFight_Addon$capApplied = cNPC_EpicFight_Addon$updateModelCap();
             npc.updateClient();
         }
     }
@@ -146,17 +145,23 @@ public class MixinDataDisplay implements IDataDisplay {
         // Force a new provider lookup. Reusing the old patch also reuses its CE BossBar,
         // BGM packet UUID, and parsed behavior provider after /reload.
         cNPC_EpicFight_Addon$capApplied = false;
-        cNPC_EpicFight_Addon$updateModelCap();
-        cNPC_EpicFight_Addon$capApplied = true;
+        // capApplied 只有在 capability 真的换成新 provider 后才能置真：
+        // 旧实现在 updateModelCap 的两个提前 return 分支（dispatcher 为空、provider.get() 为 null）
+        // 之后仍无条件置真，于是「没换成」被标记为「已换成」，后续复用判据据此放过错误的旧 patch。
+        cNPC_EpicFight_Addon$capApplied = cNPC_EpicFight_Addon$updateModelCap();
     }
 
+    /**
+     * @return 是否确实完成了 capability 提交（复用现有 patch 也算成功）。
+     *         返回 {@code false} 表示什么都没换，调用方不得把状态标记为已应用。
+     */
     @Unique
-    private void cNPC_EpicFight_Addon$updateModelCap() {
+    private boolean cNPC_EpicFight_Addon$updateModelCap() {
         CapabilityDispatcher dispatcher = ((MixinCapabilityProvider) npc).invokeGetCapabilities();
         if (dispatcher == null) {
             ((MixinCapabilityProvider) npc).invokeGatherCapabilities();
             dispatcher = ((MixinCapabilityProvider) npc).invokeGetCapabilities();
-            if (dispatcher == null) return;
+            if (dispatcher == null) return false;
         }
         ICapabilityProvider[] caps = ((IMixinCapabilityDispatcher) (Object) dispatcher).getCaps();
 
@@ -173,9 +178,18 @@ public class MixinDataDisplay implements IDataDisplay {
         // 类型相同还不够：同一 patch 类可对应任意多份数据包 provider（5 份 CE 测试包全是
         // CeNpcPatch）。ce_test_01 → ce_test_05 切换实测被旧判据放过，服务端仍持 01 的
         // provider（无 BossBar/BGM），而客户端已重建为 05（visible=true）→ 双端不一致。
+        // CE 侧用无链接门面反射比 provider（不解析 CE 类型）；其余口味走 INpcPatch 的
+        // getPatchProviderIdentity()。旧实现只有 CE 走深比较，普通/高级 patch 仍只比类，
+        // 于是「同一 patch 类、不同数据包 provider」的切换会被当成可复用而放过。
         boolean providerMatches = typeMatches;
-        if (typeMatches && CeNpcPatchOptional.isCePatch(existing)) {
-            providerMatches = CeNpcPatchOptional.sameCeProvider(existing, expected);
+        if (typeMatches) {
+            if (CeNpcPatchOptional.isCePatch(existing)) {
+                providerMatches = CeNpcPatchOptional.sameCeProvider(existing, expected);
+            } else if (existing instanceof INpcPatch existingNpc && expected instanceof INpcPatch expectedNpc) {
+                Object existingId = existingNpc.getPatchProviderIdentity();
+                Object expectedId = expectedNpc.getPatchProviderIdentity();
+                providerMatches = existingId != null && existingId == expectedId;
+            }
         }
         if (existing != null && cNPC_EpicFight_Addon$capApplied && providerMatches) {
             if (existing instanceof HumanoidMobPatch<?> humanoid) {
@@ -189,18 +203,25 @@ public class MixinDataDisplay implements IDataDisplay {
             if (npc.level().isClientSide()) {
                 CeNpcPatchOptional.invokeOnCePatch(existing, "applyCeLivingMotions");
             }
-            return;
+            return true;
         }
+
+        EntityPatchProvider newProvider = expectedProvider;
+        // 先确认新 provider 可用，再动旧状态：旧实现先 clearReloadState 清掉旧 CE 的
+        // BossBar/BGM，然后才判 newProvider.get() == null 并 return，于是查不到新 patch 时
+        // 旧血条与旧音乐已经被清掉、capability 却还是旧的，NPC 停在半清理状态。
+        if (newProvider.get() == null) return false;
 
         // 重建前清掉旧 CE patch 的 BossBar 玩家与 BGM，否则换型后旧血条/旧音乐仍挂在客户端。
         CeNpcPatchOptional.invokeOnCePatch(existing, "clearReloadState");
 
-        EntityPatchProvider newProvider = expectedProvider;
-        if (newProvider.get() == null) return;
         ((IAttributeMap) npc.getAttributes()).setSupplier(new EpicFightAttributeSupplier(((IAttributeMap) npc.getAttributes()).getSupplier()));
         try {
             ((EntityPatch) newProvider.get()).onConstructed(npc);
         } catch (IllegalArgumentException e) {
+            // EF / 坚不可摧的 SynchedEntityData 重复注册只抛这一种异常且没有专用类型或错误码，
+            // 只能按消息文本识别（同一手法已在 AdvNpcPatch:46）。非该消息一律上抛，
+            // 由调用方的刷新循环记录，不静默继续。
             if (e.getMessage() == null || !e.getMessage().contains("Duplicate id")) {
                 throw e;
             }
@@ -220,23 +241,27 @@ public class MixinDataDisplay implements IDataDisplay {
         if (npc.level().isClientSide()) {
             CeNpcPatchOptional.invokeOnCePatch(newProvider.get(), "applyCeLivingMotions");
         }
-        if (newProvider.hasCapability()) {
-            boolean hasFoundAny = false;
-            for (int i = 0; i < caps.length; i++) {
-                if (caps[i] instanceof EntityPatchProvider) {
-                    caps[i] = newProvider;
-                    hasFoundAny = true;
-                    break;
-                }
-            }
-            if (!hasFoundAny) {
-                ICapabilityProvider[] newCaps = new ICapabilityProvider[caps.length + 1];
-                System.arraycopy(caps, 0, newCaps, 0, caps.length);
-                newCaps[caps.length] = newProvider;
-                ((IMixinCapabilityDispatcher) (Object) dispatcher).setCaps(newCaps);
-                caps = newCaps;
-            }
-            CapabilityCacheRefresher.refresh(dispatcher, caps);
+        if (!newProvider.hasCapability()) {
+            // 没有可挂载的 capability，等于什么都没提交，不能标记为已应用。
+            return false;
         }
+
+        boolean hasFoundAny = false;
+        for (int i = 0; i < caps.length; i++) {
+            if (caps[i] instanceof EntityPatchProvider) {
+                caps[i] = newProvider;
+                hasFoundAny = true;
+                break;
+            }
+        }
+        if (!hasFoundAny) {
+            ICapabilityProvider[] newCaps = new ICapabilityProvider[caps.length + 1];
+            System.arraycopy(caps, 0, newCaps, 0, caps.length);
+            newCaps[caps.length] = newProvider;
+            ((IMixinCapabilityDispatcher) (Object) dispatcher).setCaps(newCaps);
+            caps = newCaps;
+        }
+        CapabilityCacheRefresher.refresh(dispatcher, caps);
+        return true;
     }
 }

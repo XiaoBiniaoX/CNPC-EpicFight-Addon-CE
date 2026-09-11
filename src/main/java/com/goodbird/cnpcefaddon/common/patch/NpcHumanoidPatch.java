@@ -39,6 +39,11 @@ public class NpcHumanoidPatch<T extends PathfinderMob> extends CustomHumanoidMob
         this.initAI();
     }
 
+    @Override
+    public Object getPatchProviderIdentity() {
+        return this.provider;
+    }
+
     /**
      * Clears a bow draw or crossbow charge left over from a previous session; see
      * {@link com.goodbird.cnpcefaddon.common.NpcBowDrawFlow}.

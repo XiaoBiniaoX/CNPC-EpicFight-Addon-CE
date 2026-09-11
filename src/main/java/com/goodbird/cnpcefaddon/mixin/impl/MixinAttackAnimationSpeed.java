@@ -28,7 +28,13 @@ import yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch;
  * 再于 {@code :36} 应用 PLAY_SPEED_MODIFIER（其中 {@code applyNpcSpeed} 乘上数据包的
  * {@code play_speed}）。两者是相继相乘的两个环节，故数据包 6.0 配合输入框 2.0 得到 12.0。
  *
- * <p>只作用于 CNPC 的 NPC：{@link AnimSpeedFactor#of} 对玩家与原版生物恒返回 1.0，
+ * <p><b>战斗欲望的动画速度也收口在这里</b>：欲望 0 → ×0.5、5 → ×1.0、10 → ×1.5，
+ * 与文本框 A 相乘。CE patch 原先在 {@code applyCeAnimationSpeed} 里另外缩放过一次
+ * CE 自己的 {@code ILivingEntityData.attackSpeed}，若两处并存，CE NPC 会被乘两遍
+ * （欲望 0 变成 0.25 倍）。故那一处已移除，动画速度只由本注入点统一决定；
+ * 欲望对<b>攻击频率</b>的缩放仍走 {@code ATTACK_SPEED} 属性，与动画速度语义不重叠。
+ *
+ * <p>只作用于 CNPC 的 NPC：{@link AnimSpeedFactor#attackAnimationSpeed} 对玩家与原版生物恒返回 1.0，
  * 玩家的攻速上限逻辑（本方法在 {@code PlayerPatch} 分支算出的 correctedSpeed）不受影响
  * （踩坑第 26 条：动 EF 共用类必须先限定实体）。
  *
@@ -45,7 +51,8 @@ public abstract class MixinAttackAnimationSpeed {
         if (entitypatch == null) {
             return;
         }
-        float factor = AnimSpeedFactor.of(entitypatch.getOriginal());
+        // 总倍率 = 战斗欲望系数 × 文本框 A（两者默认都是 1.0，故默认零影响）。
+        float factor = AnimSpeedFactor.attackAnimationSpeed(entitypatch.getOriginal());
         if (factor == AnimSpeedFactor.DEFAULT) {
             return;
         }

@@ -212,7 +212,13 @@ mixin {
 //
 // Editors and PowerShell's -Encoding UTF8 keep re-adding it, so strip it during
 // processResources instead of relying on the file staying clean in git.
+// filteringCharset 是必需的：Gradle 的 filter{} 默认按 平台默认字符集 逐行解码再编码，
+// 在中文 Windows 上就是 GBK。zh_cn.json / ru_ru.json 的非 ASCII 字符会被 GBK 解码成
+// U+FFFD 替换字符再写回 UTF-8，游戏里显示为方块和问号（实测 "动画攻速" 的 "速"
+// 变成 U+FFFD U+003F U+003F，文件还从 554 字节涨到 565）。
+// 只改 filter 内容治不了，必须显式声明字符集。
 processResources {
+    filteringCharset = 'UTF-8'
     filesMatching(['**/*.json', '**/*.toml', '**/*.mcmeta']) {
         filter { line -> line.startsWith('\uFEFF') ? line.substring(1) : line }
     }

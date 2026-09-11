@@ -711,6 +711,16 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         }
     }
 
+    /**
+     * 战斗欲望对<b>动画速度</b>的缩放已统一收口到 {@code MixinAttackAnimationSpeed}
+     * （{@code AttackAnimation.getPlaySpeed}），此处不再重复缩放 CE 自己的
+     * {@code ILivingEntityData.attackSpeed}：两处并存会让 CE NPC 被乘两遍
+     * （欲望 0 得到 0.25 倍而非 0.5 倍）。
+     *
+     * <p>本方法保留为空实现，只把 CE 的 attackSpeed 恢复成 CE/JSON 原值，
+     * 以便旧存档里已被上一版本改写过的运行时状态回到基准；欲望对<b>攻击频率</b>的缩放
+     * 仍由 {@link #applyBattleDesireAttackSpeed()} 通过 {@code ATTACK_SPEED} 属性负责。
+     */
     private void applyCeAnimationSpeed(float desire) {
         try {
             ILivingEntityData data = (ILivingEntityData) (Object) this;
@@ -719,16 +729,14 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
                 ceAttackSpeedApplied = 1.0F;
                 return;
             }
-
+            // 仅在本 patch 曾写入过缩放值时还原，避免覆盖 CE 行为树/JSON 自己设定的速度。
             float current = data.combat_evolution$getAttackSpeed();
-            float base = Math.abs(current - ceAttackSpeedApplied) < 0.0001F
-                    ? ceAttackSpeedBase : current;
-            ceAttackSpeedBase = base;
-            float scaled = base * com.goodbird.cnpcefaddon.common.BattleDesire.attackSpeedFactor(desire);
-            if (Math.abs(scaled - current) > 0.0001F) {
-                data.combat_evolution$setAttackSpeed(scaled);
+            if (ceAttackSpeedApplied != 0.0F
+                    && Math.abs(current - ceAttackSpeedApplied) < 0.0001F
+                    && Math.abs(ceAttackSpeedBase - current) > 0.0001F) {
+                data.combat_evolution$setAttackSpeed(ceAttackSpeedBase);
+                ceAttackSpeedApplied = ceAttackSpeedBase;
             }
-            ceAttackSpeedApplied = scaled;
         } catch (Throwable ignored) {
             // CE animation playback keeps its JSON speed if the optional state is unavailable.
         }

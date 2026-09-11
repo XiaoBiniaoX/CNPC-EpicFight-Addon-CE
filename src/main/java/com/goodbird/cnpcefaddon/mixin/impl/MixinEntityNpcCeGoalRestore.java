@@ -2,7 +2,10 @@ package com.goodbird.cnpcefaddon.mixin.impl;
 
 import com.goodbird.cnpcefaddon.common.patch.INpcPatch;
 import noppes.npcs.entity.EntityNPCInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -23,6 +26,13 @@ import yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch;
  */
 @Mixin(EntityNPCInterface.class)
 public abstract class MixinEntityNpcCeGoalRestore {
+    @Unique
+    private static final Logger LOGGER = LoggerFactory.getLogger("cnpcefaddon/CeGoalRestore");
+    /** updateTasks 触发极频繁，失败时限频输出避免刷屏。 */
+    @Unique
+    private static final int CNPCEF_AI_RESTORE_LOG_LIMIT = 5;
+    @Unique
+    private static int cnpcef$aiRestoreErrors;
 
     @Inject(method = "updateTasks", at = @At("TAIL"), remap = false, require = 0)
     private void cnpcef$restoreCeGoals(CallbackInfo ci) {
@@ -38,8 +48,13 @@ public abstract class MixinEntityNpcCeGoalRestore {
             if (patch instanceof INpcPatch npcPatch) {
                 npcPatch.refreshCombatAI();
             }
-        } catch (Throwable ignored) {
-            // patch 缺失或 CE 未装时保持 CNPC 原生 AI
+        } catch (Throwable t) {
+            // 失败时仍回落 CNPC 原生 AI（不 rethrow：不能让 updateTasks 整个炸掉），
+            // 但必须留痕：这里覆盖全部 INpcPatch 口味，静默失败的表现是
+            // 「NPC 追过来却基本不攻击」，而日志里没有任何线索。
+            if (cnpcef$aiRestoreErrors++ < CNPCEF_AI_RESTORE_LOG_LIMIT) {
+                LOGGER.error("Failed to restore combat AI for NPC {}", npc.getUUID(), t);
+            }
         }
     }
 }

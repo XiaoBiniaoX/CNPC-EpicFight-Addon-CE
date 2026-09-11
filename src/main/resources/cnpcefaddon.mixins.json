@@ -54,7 +54,6 @@
     "MixinRenderEngineEvents",
     "MixinSkinnedMeshDraw",
     "MixinGuiNpcStats",
-    "MixinGuiNpcDisplayAnimSpeed",
     "MixinTargetIndicator"
   ],
   "minVersion": "0.8"

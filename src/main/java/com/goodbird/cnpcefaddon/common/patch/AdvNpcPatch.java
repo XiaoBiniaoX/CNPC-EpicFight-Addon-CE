@@ -56,6 +56,11 @@ public class AdvNpcPatch<T extends PathfinderMob> extends AdvancedCustomHumanoid
         this.initAI();
     }
 
+    @Override
+    public Object getPatchProviderIdentity() {
+        return this.provider;
+    }
+
     /**
      * Clears a bow draw or crossbow charge left over from a previous session.
      * <p>
