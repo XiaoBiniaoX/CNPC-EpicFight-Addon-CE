@@ -126,7 +126,8 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
                 tag = TagParser.parseTag((entry.getValue()).toString());
             } catch (CommandSyntaxException e) {
                 LOGGER.error("Failed to parse Adv NPC EpicFight mobpatch data for {}: {}", entry.getKey(), e.getMessage());
-                NpcPatchReloadListener.loadErrors.put(entry.getKey(), e.getMessage());
+                // loadErrors 是 ConcurrentHashMap，拒绝 null 值；getMessage() 对 NPE 等返回 null。
+                NpcPatchReloadListener.loadErrors.put(entry.getKey(), NpcPatchReloadListener.describeError(e));
             }
             if (tag != null) {
                 try {
@@ -143,7 +144,7 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
                     tempTags.put(entry.getKey(), filteredTag);
                 } catch (Exception e) {
                     LOGGER.error("Failed to load Adv NPC EpicFight mobpatch for {}: {}", entry.getKey(), e.getMessage());
-                    NpcPatchReloadListener.loadErrors.put(entry.getKey(), e.getMessage());
+                    NpcPatchReloadListener.loadErrors.put(entry.getKey(), NpcPatchReloadListener.describeError(e));
                 }
             }
         }

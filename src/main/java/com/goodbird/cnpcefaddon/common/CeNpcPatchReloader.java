@@ -181,8 +181,8 @@ public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
         return deserialize(tag);
     }
 
+    /** 统一走 {@link NpcPatchReloadListener#describeError}，避免三个 reloader 各留一份副本。 */
     private static String describeError(Throwable error) {
-        String message = error.getMessage();
-        return message == null || message.isEmpty() ? error.getClass().getSimpleName() : message;
+        return NpcPatchReloadListener.describeError(error);
     }
 }

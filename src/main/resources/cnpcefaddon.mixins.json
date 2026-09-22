@@ -13,7 +13,8 @@
     "MixinAnimationClipNaNGuard",
     "MixinAnimationEvent",
     "MixinAttackAnimationSpeed",
-    "MixinAttributeMap",
+     "MixinAttributeMap",
+     "MixinAttributeInstanceDuplicateGuard",
     "MixinCapabilityDispatcher2",
     "MixinCapabilityProvider",
     "MixinCombatBehaviors",
@@ -22,6 +23,7 @@
     "MixinDataDisplaySetVisible",
     "MixinEntityLivingWrapper",
     "MixinEntityNpcArmorSlots",
+    "MixinEntityNpcAttackEffect",
     "MixinEntityNpcInterface",
     "MixinEntityNpcNativeAttack",
     "MixinEntityNpcCeGoalRestore",
@@ -33,9 +35,9 @@
     "MixinLinkAnimation",
     "MixinLivingEntityPatchDamage",
     "MixinLivingEntityPatchPlaySync",
-    "MixinLivingEntityPatchStun",
+     "MixinLivingEntityPatchStun",
 
-    "MixinNPCWrapper",
+     "MixinNPCWrapper",
     "MixinServerAnimator"
   ],
   "client": [

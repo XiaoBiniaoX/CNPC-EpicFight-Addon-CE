@@ -9,7 +9,6 @@ import com.goodbird.cnpcefaddon.common.provider.NpcHumanoidPatchProvider;
 import com.goodbird.cnpcefaddon.common.provider.NpcPatchProvider;
 import com.goodbird.cnpcefaddon.mixin.impl.ICustomHumanoidMobPatchProvider;
 import com.goodbird.cnpcefaddon.mixin.impl.ICustomMobPatchProvider;
-import com.google.common.collect.Maps;
 import net.minecraft.network.chat.Component;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -53,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -74,9 +74,19 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
     private static final int REBIND_ERROR_LOG_LIMIT = 5;
 
     public static final NpcBranchPatchProvider branchPatchProvider = new NpcBranchPatchProvider();
-    public static final Set<ResourceLocation> AVAILABLE_MODELS = new HashSet<>();
-    public static final Map<ResourceLocation, CompoundTag> TAGMAP = Maps.newHashMap();
-    public static final Map<ResourceLocation, String> loadErrors = new HashMap<>();
+
+    // 这三个表被三方并发访问，必须是并发容器（踩坑第 27 条 / ⑦ 章节，2026-08-25 已定案，
+    // 但该修复在后续某轮被回退成了普通 HashMap，2026-09-11 自检发现并重新落地）：
+    //   ① 资源重载线程：clear() + addAll()/putAll()（本类 :172-175、:413-414，
+    //      AdvNpcPatchReloader:116,117,184,185，CeNpcPatchReloader:107,108,116,117）
+    //   ② Server thread：玩家登录 OnDatapackSyncEvent 遍历 getDataStream()
+    //      （CNPCEpicFightAddon:70-71 → 本类 :252 的 TAGMAP.values().stream()）
+    //   ③ 客户端 GUI 线程：MixinGuiCreationEntities:50 遍历 AVAILABLE_MODELS
+    // 用普通 HashMap 时，玩家登录恰好与 /reload 或世界加载重叠就抛
+    // ConcurrentModificationException，表现为「进单人游戏被踢一次，第二次可进」。
+    public static final Set<ResourceLocation> AVAILABLE_MODELS = ConcurrentHashMap.newKeySet();
+    public static final Map<ResourceLocation, CompoundTag> TAGMAP = new ConcurrentHashMap<>();
+    public static final Map<ResourceLocation, String> loadErrors = new ConcurrentHashMap<>();
 
     public NpcPatchReloadListener() {
         super(GSON, "npc_epicfight_mobpatch");
@@ -103,7 +113,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                 tag = TagParser.parseTag((entry.getValue()).toString());
             } catch (CommandSyntaxException e) {
                 LOGGER.error("Failed to parse NPC EpicFight mobpatch data for {}: {}", entry.getKey(), e.getMessage());
-                loadErrors.put(entry.getKey(), e.getMessage());
+                loadErrors.put(entry.getKey(), describeError(e));
             }
             if (tag != null) {
                 try {
@@ -123,7 +133,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                     tempTags.put(entry.getKey(), filteredTag);
                 } catch (Exception e) {
                     LOGGER.error("Failed to load NPC EpicFight mobpatch for {}: {}", entry.getKey(), e.getMessage());
-                    loadErrors.put(entry.getKey(), e.getMessage());
+                    loadErrors.put(entry.getKey(), describeError(e));
                 }
             }
         }
@@ -250,6 +260,21 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
 
     public static Stream<CompoundTag> getDataStream() {
         return TAGMAP.values().stream();
+    }
+
+    /**
+     * 把异常描述成可写入 {@link #loadErrors} 的非 null 字符串。
+     *
+     * <p>{@code loadErrors} 是 {@code ConcurrentHashMap}，它<b>拒绝 null 值</b>；
+     * 而 {@code Throwable.getMessage()} 对 NPE 之类的异常返回 null，直接
+     * {@code put(key, e.getMessage())} 会抛 NPE —— 把原本「玩家被踢一次」的问题
+     * 升级成「服务端崩溃」。踩坑第 27 条把这一点列为换容器时的必查项。
+     *
+     * <p>message 为 null 或空时回退到异常类名，保证玩家仍能看到有意义的提示。
+     */
+    public static String describeError(Throwable error) {
+        String message = error.getMessage();
+        return message == null || message.isEmpty() ? error.getClass().getSimpleName() : message;
     }
 
     /**
