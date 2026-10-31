@@ -12,6 +12,7 @@ import yesman.epicfight.api.animation.types.EntityState;
 import yesman.epicfight.world.capabilities.entitypatch.MobPatch;
 import yesman.epicfight.world.entity.ai.goal.AnimatedAttackGoal;
 import yesman.epicfight.world.entity.ai.goal.CombatBehaviors;
+import top.bincnpcef.common.AddonConfig;
 
 /**
  * 问题4（NPC 不攻击/呆傻）运行时诊断：
@@ -44,6 +45,7 @@ public abstract class MixinAnimatedAttackGoal {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void cnpcef$diagnoseAttack(CallbackInfo ci) {
+        if (!AddonConfig.ATTACK_DIAGNOSTICS.get()) return;
         var original = this.mobpatch.getOriginal();
         long now = System.currentTimeMillis();
         boolean targetMissing = this.mobpatch.getTarget() == null;
@@ -72,6 +74,7 @@ public abstract class MixinAnimatedAttackGoal {
         at = @At(value = "INVOKE",
             target = "Lyesman/epicfight/world/entity/ai/goal/CombatBehaviors$Behavior;execute(Lyesman/epicfight/world/capabilities/entitypatch/MobPatch;)V"))
     private void cnpcef$diagnoseExecute(CallbackInfo ci) {
+        if (!AddonConfig.ATTACK_DIAGNOSTICS.get()) return;
         var original = this.mobpatch.getOriginal();
         if (original != null) {
             LOGGER.info("[diag-attack] {} executes an attack behavior (hasActivatedMove={})",

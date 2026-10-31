@@ -50,6 +50,12 @@ public final class NpcDamageModel {
             return modifiedDamage;
         }
 
+        // 默认模式在伤害源的最终计算出口挂钩近战值，此处不再分配两手武器属性列表。
+        // 弹射物不走本旧武器叠加模型，保留其原始伤害。
+        if (AddonConfig.NPC_DAMAGE_USE_MELEE_STRENGTH.get()) {
+            return modifiedDamage;
+        }
+
         float configured = npc.stats == null || npc.stats.melee == null
                 ? 0.0F
                 : npc.stats.melee.getStrength();

@@ -12,6 +12,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import top.bincnpcef.common.NpcPatchReloadListener;
+import top.bincnpcef.common.NpcCombatParameters;
+import top.bincnpcef.common.CnpcBranchPatchProvider;
 import top.bincnpcef.mixin.IAttachmentEntityPatchProvider;
 import top.bincnpcef.api.IDataDisplay;
 import yesman.epicfight.registry.entries.EpicFightAttachmentTypes;
@@ -27,15 +29,22 @@ public class MixinDataDisplay implements IDataDisplay {
     @Unique
     private ResourceLocation cnpcef$efModel = null;
 
+    @Unique private float cnpcef$animSpeed = NpcCombatParameters.DEFAULT_SPEED;
+    @Unique private ResourceLocation cnpcef$boundModel;
+    @Unique private CnpcBranchPatchProvider cnpcef$boundProvider;
+
     @Inject(method = "save", at = @At("HEAD"), remap = false)
     private void cnpcef$onSave(CompoundTag nbt, CallbackInfoReturnable<CompoundTag> cir) {
         if (cnpcef$efModel != null) {
             nbt.putString("efModel", cnpcef$efModel.toString());
         }
+        nbt.putFloat(NpcCombatParameters.SPEED_KEY, cnpcef$animSpeed);
     }
 
     @Inject(method = "readToNBT", at = @At("HEAD"), remap = false)
     private void cnpcef$onReadToNBT(CompoundTag nbt, CallbackInfo ci) {
+        cnpcef$setAnimSpeed(NpcCombatParameters.read(nbt, NpcCombatParameters.SPEED_KEY,
+                NpcCombatParameters.DEFAULT_SPEED));
         if (nbt.contains("efModel")) {
             cnpcef$efModel = ResourceLocation.parse(nbt.getString("efModel"));
             cnpcef$updateModelCap();
@@ -64,12 +73,29 @@ public class MixinDataDisplay implements IDataDisplay {
         return cnpcef$efModel != null;
     }
 
+    @Override
+    public float cnpcef$getAnimSpeed() {
+        return cnpcef$animSpeed;
+    }
+
+    @Override
+    public void cnpcef$setAnimSpeed(float value) {
+        cnpcef$animSpeed = NpcCombatParameters.sanitizeSpeed(value);
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Unique
     private void cnpcef$updateModelCap() {
         try {
             AttachmentEntityPatchProvider provider = npc.getData(EpicFightAttachmentTypes.ENTITY_PATCH);
             if (provider == null) {
+                return;
+            }
+            // CNPC 每次外观/追踪同步都会读 DataDisplay。相同模型与重载代际无需重建
+            // Animator/AI/armature，否则动作被打断，且重复分配与装配随 NPC 数量放大。
+            if (java.util.Objects.equals(cnpcef$efModel, cnpcef$boundModel)
+                    && cnpcef$boundProvider == NpcPatchReloadListener.branchPatchProvider
+                    && provider.getCapability() != null) {
                 return;
             }
             EntityPatch<?> patch = NpcPatchReloadListener.branchPatchProvider.get(npc);
@@ -91,6 +117,8 @@ public class MixinDataDisplay implements IDataDisplay {
                     }
                 }
             }
+            cnpcef$boundModel = cnpcef$efModel;
+            cnpcef$boundProvider = NpcPatchReloadListener.branchPatchProvider;
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -12,9 +12,25 @@ public class AddonConfig {
     public static final ModConfigSpec.BooleanValue ARMOR_STUN_BENEFIT_POSITIVE;
 
     public static final ModConfigSpec.BooleanValue NPC_ATTACK_SPEED_USE_MELEE_DELAY;
+    public static final ModConfigSpec.BooleanValue NPC_DAMAGE_USE_MELEE_STRENGTH;
+    public static final ModConfigSpec.BooleanValue ATTACK_DIAGNOSTICS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+
+        builder.push("damage");
+        builder.comment("默认开启：EF NPC 近战伤害以 CNPC 的近战伤害为准（设置3则攻击值3），不叠加武器或动画伤害倍率。",
+                "不改弹射物/弩或处决；目标护甲、抗性、格挡与阵营保护仍然生效。",
+                "关闭可恢复本附属旧版的武器伤害叠加模型。保存配置后即时生效，无需重启。")
+                .translation("cnpcef.configuration.npcDamageUseMeleeStrength");
+        NPC_DAMAGE_USE_MELEE_STRENGTH = builder.define("npcDamageUseMeleeStrength", true);
+        builder.pop();
+
+        builder.push("diagnostics");
+        builder.comment("攻击诊断日志，默认关闭以避免大量 NPC 每招刷 INFO 日志。排障时可热开启。")
+                .translation("cnpcef.configuration.attackDiagnostics");
+        ATTACK_DIAGNOSTICS = builder.define("attackDiagnostics", false);
+        builder.pop();
 
         builder.push("faction_protection");
 

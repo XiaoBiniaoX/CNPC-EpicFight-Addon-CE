@@ -16,4 +16,8 @@ public interface IDataDisplay {
     void cnpcef$setEFModel(ResourceLocation model);
 
     boolean cnpcef$hasEFModel();
+
+    float cnpcef$getAnimSpeed();
+
+    void cnpcef$setAnimSpeed(float value);
 }
