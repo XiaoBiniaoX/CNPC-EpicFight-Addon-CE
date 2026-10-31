@@ -18,7 +18,7 @@ public class AddonConfig {
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
-        builder.push("damage");
+        builder.translation("cnpcef.configuration.damage").push("damage");
         builder.comment("默认开启：EF NPC 近战伤害以 CNPC 的近战伤害为准（设置3则攻击值3），不叠加武器或动画伤害倍率。",
                 "不改弹射物/弩或处决；目标护甲、抗性、格挡与阵营保护仍然生效。",
                 "关闭可恢复本附属旧版的武器伤害叠加模型。保存配置后即时生效，无需重启。")
@@ -26,20 +26,20 @@ public class AddonConfig {
         NPC_DAMAGE_USE_MELEE_STRENGTH = builder.define("npcDamageUseMeleeStrength", true);
         builder.pop();
 
-        builder.push("diagnostics");
+        builder.translation("cnpcef.configuration.diagnostics").push("diagnostics");
         builder.comment("攻击诊断日志，默认关闭以避免大量 NPC 每招刷 INFO 日志。排障时可热开启。")
                 .translation("cnpcef.configuration.attackDiagnostics");
         ATTACK_DIAGNOSTICS = builder.define("attackDiagnostics", false);
         builder.pop();
 
-        builder.push("faction_protection");
+        builder.translation("cnpcef.configuration.faction_protection").push("faction_protection");
 
         builder.comment(
                 "NPC阵营友伤保护：开启后，NPC的史诗战斗攻击不会伤害与其阵营不敌对的NPC。",
                 "仅对NPC攻击者生效，普通生物（如僵尸）不受影响。",
                 "Faction friendly fire protection: When enabled, NPC epic fight attacks",
                 "will not damage NPCs whose faction is not hostile to the attacker."
-        );
+        ).translation("cnpcef.configuration.npcFactionFriendlyFire");
         NPC_FACTION_FRIENDLY_FIRE = builder.define("npcFactionFriendlyFire", true);
 
         builder.comment(
@@ -49,12 +49,12 @@ public class AddonConfig {
                 "NPC-to-player faction protection: When enabled, NPCs whose faction is friendly",
                 "to the player will not damage them. Neutral faction NPCs will only damage",
                 "the player if the player is their current attack target."
-        );
+        ).translation("cnpcef.configuration.npcPlayerFactionProtection");
         NPC_PLAYER_FACTION_PROTECTION = builder.define("npcPlayerFactionProtection", true);
 
         builder.pop();
 
-        builder.push("player_stun");
+        builder.translation("cnpcef.configuration.player_stun").push("player_stun");
 
         builder.comment(
                 "玩家免僵直的防御阈值（原版护甲点）。玩家防御值 >= 此值时，",
@@ -62,7 +62,7 @@ public class AddonConfig {
                 "设为 0 或负数可关闭此免疫。",
                 "Armor threshold above which a player becomes immune to NPC-inflicted stun.",
                 "Set to 0 or below to disable the immunity entirely."
-        );
+        ).translation("cnpcef.configuration.playerStunImmuneArmor");
         PLAYER_STUN_IMMUNE_ARMOR = builder.defineInRange("playerStunImmuneArmor", 30.0D, -1.0D, 1024.0D);
 
         builder.comment(
@@ -74,12 +74,12 @@ public class AddonConfig {
                 "Direction of the armor-to-stun relationship. true: more armor shortens stun.",
                 "false: more armor lengthens stun. Applied through Epic Fight's own",
                 "stunTime = base * (1 - stunReduction) formula."
-        );
+        ).translation("cnpcef.configuration.armorStunBenefitPositive");
         ARMOR_STUN_BENEFIT_POSITIVE = builder.define("armorStunBenefitPositive", true);
 
         builder.pop();
 
-        builder.push("attack_speed");
+        builder.translation("cnpcef.configuration.attack_speed").push("attack_speed");
 
         builder.comment(
                 "NPC 攻击速度是否跟随 CNPC 自身的近战攻击延迟（stats.melee.getDelay，单位 tick）。",
@@ -88,7 +88,7 @@ public class AddonConfig {
                 "Whether NPC attack speed follows the NPC's own melee delay (stats.melee.Delay, in ticks).",
                 "true: animation speed is computed as 20 / meleeDelay; false (default): use",
                 "Epic Fight's default weapon attack speed untouched."
-        );
+        ).translation("cnpcef.configuration.npcAttackSpeedUseMeleeDelay");
         NPC_ATTACK_SPEED_USE_MELEE_DELAY = builder.define("npcAttackSpeedUseMeleeDelay", false);
 
         builder.pop();

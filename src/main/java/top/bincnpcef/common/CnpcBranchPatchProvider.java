@@ -18,13 +18,16 @@ public class CnpcBranchPatchProvider extends MobPatchReloadListener.AbstractMobP
     private static final ResourceLocation FORCED_ARMATURE = ResourceLocation.parse("epicfight:entity/biped");
 
     private final Map<ResourceLocation, MobPatchReloadListener.AbstractMobPatchProvider> providers = new HashMap<>();
+    private final Map<ResourceLocation, CompoundTag> data = new HashMap<>();
 
-    public void addProvider(ResourceLocation rl, MobPatchReloadListener.AbstractMobPatchProvider provider) {
+    public void addProvider(ResourceLocation rl, MobPatchReloadListener.AbstractMobPatchProvider provider, CompoundTag tag) {
         providers.put(rl, provider);
+        data.put(rl, tag.copy());
     }
 
     public void clear() {
         providers.clear();
+        data.clear();
     }
 
     public boolean hasProvider(ResourceLocation rl) {
@@ -43,8 +46,8 @@ public class CnpcBranchPatchProvider extends MobPatchReloadListener.AbstractMobP
                     // 新建的 NPC 不会调用 readData，导致 initAttributes 不执行，
                     // IMPACT/ARMOR_NEGATION 等属性保持默认值（0.5/0.0）。
                     // 主动调用 readData 确保属性被正确设置。
-                    if (patch != null && NpcPatchReloadListener.TAGMAP.containsKey(efModel)) {
-                        CompoundTag tag = NpcPatchReloadListener.TAGMAP.get(efModel).copy();
+                    if (patch != null && data.containsKey(efModel)) {
+                        CompoundTag tag = data.get(efModel).copy();
                         tag.putString("armature", FORCED_ARMATURE.toString());
                         try {
                             patch.readData(tag);

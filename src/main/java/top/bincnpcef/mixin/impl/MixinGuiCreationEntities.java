@@ -34,7 +34,7 @@ public class MixinGuiCreationEntities extends GuiCreationScreenInterface {
     @Inject(method = "init", at = @At("TAIL"))
     private void cnpcef$init(CallbackInfo ci) {
         List<String> list = new ArrayList<>();
-        for (ResourceLocation resLoc : NpcPatchReloadListener.AVAILABLE_MODELS) {
+        for (ResourceLocation resLoc : NpcPatchReloadListener.clientModels()) {
             list.add(resLoc.toString());
         }
         String curName = "Select Config";

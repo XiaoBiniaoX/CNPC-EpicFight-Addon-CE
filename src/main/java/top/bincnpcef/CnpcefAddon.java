@@ -82,17 +82,12 @@ public class CnpcefAddon {
     }
 
     private void onDatapackSync(OnDatapackSyncEvent event) {
-        SPDatapackSync packet = new SPDatapackSync(
-            NpcPatchReloadListener.getModelIdList(),
-            NpcPatchReloadListener.getTagList()
-        );
+        SPDatapackSync packet = NpcPatchReloadListener.syncPacket();
 
         ServerPlayer player = event.getPlayer();
         if (player != null) {
-            // 单机模式下不向本机玩家发送同步包（其已通过本地重载获得数据）
-            if (!player.getServer().isSingleplayerOwner(player.getGameProfile())) {
-                PacketDistributor.sendToPlayer(player, packet);
-            }
+            // 单机客户端也安装自己的 client provider，不能复用服务端反序列化结果。
+            PacketDistributor.sendToPlayer(player, packet);
         } else {
             event.getPlayerList().getPlayers().forEach(p -> PacketDistributor.sendToPlayer(p, packet));
         }

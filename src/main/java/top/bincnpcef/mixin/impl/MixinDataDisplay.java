@@ -20,9 +20,12 @@ import yesman.epicfight.registry.entries.EpicFightAttachmentTypes;
 import yesman.epicfight.world.capabilities.entitypatch.EntityPatch;
 import yesman.epicfight.world.capabilities.entitypatch.HumanoidMobPatch;
 import yesman.epicfight.world.capabilities.provider.AttachmentEntityPatchProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Mixin(value = DataDisplay.class, priority = 1001)
 public class MixinDataDisplay implements IDataDisplay {
+    @Unique private static final Logger CNPCEF_LOGGER = LoggerFactory.getLogger("CNPC-EF-Addon");
     @Shadow(remap = false)
     EntityNPCInterface npc;
 
@@ -32,6 +35,8 @@ public class MixinDataDisplay implements IDataDisplay {
     @Unique private float cnpcef$animSpeed = NpcCombatParameters.DEFAULT_SPEED;
     @Unique private ResourceLocation cnpcef$boundModel;
     @Unique private CnpcBranchPatchProvider cnpcef$boundProvider;
+    @Unique private EntityPatch<?> cnpcef$boundPatch;
+    @Unique private boolean cnpcef$bindingFailed;
 
     @Inject(method = "save", at = @At("HEAD"), remap = false)
     private void cnpcef$onSave(CompoundTag nbt, CallbackInfoReturnable<CompoundTag> cir) {
@@ -41,14 +46,15 @@ public class MixinDataDisplay implements IDataDisplay {
         nbt.putFloat(NpcCombatParameters.SPEED_KEY, cnpcef$animSpeed);
     }
 
-    @Inject(method = "readToNBT", at = @At("HEAD"), remap = false)
+    @Inject(method = "readToNBT", at = @At("TAIL"), remap = false)
     private void cnpcef$onReadToNBT(CompoundTag nbt, CallbackInfo ci) {
         cnpcef$setAnimSpeed(NpcCombatParameters.read(nbt, NpcCombatParameters.SPEED_KEY,
                 NpcCombatParameters.DEFAULT_SPEED));
         if (nbt.contains("efModel")) {
-            cnpcef$efModel = ResourceLocation.parse(nbt.getString("efModel"));
-            cnpcef$updateModelCap();
+            cnpcef$efModel = ResourceLocation.tryParse(nbt.getString("efModel"));
         }
+        cnpcef$updateModelCap();
+        cnpcef$updateClientWeaponMotions();
     }
 
     @Override
@@ -60,6 +66,7 @@ public class MixinDataDisplay implements IDataDisplay {
     public void cnpcef$setEFModel(ResourceLocation model) {
         cnpcef$efModel = model;
         cnpcef$updateModelCap();
+        cnpcef$updateClientWeaponMotions();
         // 不调用 npc.updateClient()——该方法是服务端专用（内部调 PacketDistributor.sendToPlayersTrackingEntity），
         // 在客户端 GUI 回调中调用会崩溃。
         // efModel 的持久化和同步由 CNPC 的 Save 流程自动处理：
@@ -83,9 +90,24 @@ public class MixinDataDisplay implements IDataDisplay {
         cnpcef$animSpeed = NpcCombatParameters.sanitizeSpeed(value);
     }
 
+    @Override
+    public void cnpcef$refreshModelCap() {
+        if (cnpcef$efModel != null && cnpcef$boundProvider != NpcPatchReloadListener.providerFor(npc)) {
+            cnpcef$updateModelCap();
+        }
+    }
+
+    @Unique
+    private void cnpcef$updateClientWeaponMotions() {
+        // readSpawnData 先装武器再读 display；同模型同步也需刷新站姿，不必重建 Animator。
+        if (npc.level().isClientSide() && npc.getData(EpicFightAttachmentTypes.ENTITY_PATCH).getCapability()
+                instanceof HumanoidMobPatch<?> patch) patch.modifyLivingMotionByCurrentItem(false);
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Unique
     private void cnpcef$updateModelCap() {
+        CnpcBranchPatchProvider branch = NpcPatchReloadListener.providerFor(npc);
         try {
             AttachmentEntityPatchProvider provider = npc.getData(EpicFightAttachmentTypes.ENTITY_PATCH);
             if (provider == null) {
@@ -94,33 +116,35 @@ public class MixinDataDisplay implements IDataDisplay {
             // CNPC 每次外观/追踪同步都会读 DataDisplay。相同模型与重载代际无需重建
             // Animator/AI/armature，否则动作被打断，且重复分配与装配随 NPC 数量放大。
             if (java.util.Objects.equals(cnpcef$efModel, cnpcef$boundModel)
-                    && cnpcef$boundProvider == NpcPatchReloadListener.branchPatchProvider
-                    && provider.getCapability() != null) {
+                    && cnpcef$boundProvider == branch) {
+                // 第三方在同代替换 patch 时不反复争抢；下一代或显式换模型再重新安装。
+                if (provider.getCapability() != cnpcef$boundPatch) cnpcef$boundPatch = provider.getCapability();
+                if (cnpcef$bindingFailed || provider.getCapability() == cnpcef$boundPatch) return;
+            }
+            if (cnpcef$efModel == null && cnpcef$boundModel == null) {
+                cnpcef$boundProvider = branch;
                 return;
             }
-            EntityPatch<?> patch = NpcPatchReloadListener.branchPatchProvider.get(npc);
+            EntityPatch<?> patch = branch.get(npc);
             ((IAttachmentEntityPatchProvider) (Object) provider).cnpcef$setEntityPatch(patch);
             if (patch != null) {
                 ((EntityPatch) patch).onConstructed(npc);
                 // onJoinWorld 只在 NPC 已在世界中时调用（GUI 修改 efModel 的场景）
                 // 首次从 NBT 加载时由 EF 事件钩子自动调用
-                if (npc.level() != null && npc.isAlive() && npc.tickCount > 0) {
+                if (npc.level() != null && npc.tickCount > 0) {
                     ((EntityPatch) patch).onJoinWorld(npc, npc.level(), false);
-                }
-                // 客户端 patch 需要主动应用武器动画。服务端在 addRegularEntries 中通过
-                // MixinEntityNpcInterface.cnpcef$setEFCombatAI 调用 modifyLivingMotionByCurrentItem，
-                // 但客户端不执行该路径。退出重进时若不在此处应用，客户端会退化为空手站姿。
-                if (npc.level() != null && npc.level().isClientSide() && patch instanceof HumanoidMobPatch<?> humanoidPatch) {
-                    try {
-                        humanoidPatch.modifyLivingMotionByCurrentItem(true);
-                    } catch (Exception ignored) {
-                    }
                 }
             }
             cnpcef$boundModel = cnpcef$efModel;
-            cnpcef$boundProvider = NpcPatchReloadListener.branchPatchProvider;
+            cnpcef$boundProvider = branch;
+            cnpcef$boundPatch = patch;
+            cnpcef$bindingFailed = false;
         } catch (Exception e) {
-            e.printStackTrace();
+            // 失败按模型/代际缓存，避免坏模型在每 tick 重试并刷日志；重载后可重试。
+            cnpcef$boundModel = cnpcef$efModel;
+            cnpcef$boundProvider = branch;
+            cnpcef$bindingFailed = true;
+            CNPCEF_LOGGER.error("Failed to bind NPC EF model {} for entity {}", cnpcef$efModel, npc.getId(), e);
         }
     }
 }

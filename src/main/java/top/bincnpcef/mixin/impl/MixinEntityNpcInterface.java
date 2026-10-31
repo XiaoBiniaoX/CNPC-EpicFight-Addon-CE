@@ -7,10 +7,18 @@ import noppes.npcs.entity.EntityNPCInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.nbt.CompoundTag;
+import top.bincnpcef.api.IDataDisplay;
+import top.bincnpcef.api.IDataMeleeAttackDesire;
+import top.bincnpcef.common.NpcCombatParameters;
+import top.bincnpcef.common.NpcDeathRecovery;
+import top.bincnpcef.common.AddonConfig;
 import top.bincnpcef.common.NpcDamageSourceConverter;
 import yesman.epicfight.world.capabilities.EpicFightCapabilities;
 import yesman.epicfight.world.capabilities.entitypatch.HumanoidMobPatch;
@@ -34,6 +42,35 @@ import yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch;
 @Mixin(value = EntityNPCInterface.class)
 public abstract class MixinEntityNpcInterface {
     private static final Logger LOGGER = LoggerFactory.getLogger("CNPC-EF-Addon");
+    @Unique private NpcDeathRecovery cnpcef$deathRecovery;
+
+    @Inject(method = "writeSpawnData()Lnet/minecraft/nbt/CompoundTag;", at = @At("RETURN"), remap = false)
+    private void cnpcef$writeCombatParameters(CallbackInfoReturnable<CompoundTag> cir) {
+        cir.getReturnValue().putFloat(NpcCombatParameters.DESIRE_KEY,
+                NpcCombatParameters.desire((EntityNPCInterface) (Object) this));
+    }
+
+    @Inject(method = "readSpawnData(Lnet/minecraft/nbt/CompoundTag;)V", at = @At("TAIL"), remap = false)
+    private void cnpcef$readCombatParameters(CompoundTag tag, CallbackInfo ci) {
+        EntityNPCInterface npc = (EntityNPCInterface) (Object) this;
+        ((IDataMeleeAttackDesire) npc.stats.melee).cnpcef$setAttackDesire(
+                NpcCombatParameters.read(tag, NpcCombatParameters.DESIRE_KEY, NpcCombatParameters.DEFAULT_DESIRE));
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void cnpcef$beforeTick(CallbackInfo ci) {
+        EntityNPCInterface npc = (EntityNPCInterface) (Object) this;
+        if (npc.display != null) ((IDataDisplay) npc.display).cnpcef$refreshModelCap();
+        if (!npc.level().isClientSide()) {
+            if (cnpcef$deathRecovery == null) cnpcef$deathRecovery = new NpcDeathRecovery();
+            cnpcef$deathRecovery.beforeTick(npc);
+        }
+    }
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void cnpcef$afterTick(CallbackInfo ci) {
+        if (cnpcef$deathRecovery != null) cnpcef$deathRecovery.afterTick((EntityNPCInterface) (Object) this);
+    }
 
     @Inject(method = "addRegularEntries", at = @At("TAIL"), remap = false)
     private void cnpcef$setEFCombatAI(CallbackInfo ci) {
@@ -55,9 +92,9 @@ public abstract class MixinEntityNpcInterface {
             } catch (Exception e) {
                 LOGGER.error("addRegularEntries: modifyLivingMotionByCurrentItem failed for NPC {}", self.getName().getString(), e);
             }
-            LOGGER.info("addRegularEntries: EF AI registered for NPC {} (patch={}, ranged={})",
-                self.getName().getString(), patch.getClass().getName(), holdingRangedWeapon);
-        } else {
+            if (AddonConfig.ATTACK_DIAGNOSTICS.get()) LOGGER.info("addRegularEntries: EF AI registered for NPC {} (patch={}, ranged={})",
+                    self.getName().getString(), patch.getClass().getName(), holdingRangedWeapon);
+        } else if (AddonConfig.ATTACK_DIAGNOSTICS.get()) {
             LOGGER.warn("addRegularEntries: NPC {} has no HumanoidMobPatch (patch={})",
                 self.getName().getString(), patch == null ? "null" : patch.getClass().getName());
         }

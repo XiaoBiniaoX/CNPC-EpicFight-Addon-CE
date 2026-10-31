@@ -7,6 +7,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import top.bincnpcef.common.NpcPatchReloadListener;
 import top.bincnpcef.api.IDataDisplay;
 import top.bincnpcef.client.render.RenderStorage;
 import yesman.epicfight.client.events.engine.RenderEngine;
@@ -22,13 +24,17 @@ import yesman.epicfight.client.renderer.patched.entity.PatchedEntityRenderer;
  */
 @Mixin(value = RenderEngine.class)
 public class MixinRenderEngine {
+    @Inject(method = "resetRenderers", at = @At("TAIL"), remap = false)
+    private void cnpcef$refreshRenderers(CallbackInfo ci) {
+        RenderStorage.registerRenderers(NpcPatchReloadListener.clientTags());
+    }
 
     @Inject(method = "getEntityRenderer", at = @At("HEAD"), cancellable = true, remap = false)
     private void cnpcef$getEntityRenderer(Entity entity, CallbackInfoReturnable<PatchedEntityRenderer> cir) {
         if (entity instanceof EntityNPCInterface npc && npc.display != null) {
             IDataDisplay dataDisplay = (IDataDisplay) npc.display;
             ResourceLocation model = dataDisplay.cnpcef$getEFModel();
-            if (model != null && RenderStorage.renderersMap.containsKey(model)) {
+            if (model != null) {
                 PatchedEntityRenderer renderer = RenderStorage.renderersMap.get(model);
                 if (renderer != null) {
                     cir.setReturnValue(renderer);

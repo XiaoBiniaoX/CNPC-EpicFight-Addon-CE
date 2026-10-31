@@ -6,14 +6,17 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.damagesource.DamageSource;
 import noppes.npcs.entity.EntityNPCInterface;
 import yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch;
 import yesman.epicfight.world.capabilities.item.CapabilityItem;
+import yesman.epicfight.world.damagesource.EpicFightDamageSource;
+import yesman.epicfight.world.damagesource.EpicFightDamageTypeTags;
 
 import java.util.List;
 
 /**
- * Damage model for NPCs running an Epic Fight patch.
+ * Legacy weapon-stacking model, used only when CNPC melee damage linking is disabled.
  *
  * <p>{@code EntityNPCInterface.doHurtTarget} deals exactly {@code stats.melee.getStrength()} and
  * never consults the held item, so an EF-patched NPC swinging a diamond sword hit for the
@@ -33,6 +36,14 @@ public final class NpcDamageModel {
     private NpcDamageModel() {
     }
 
+    public static boolean useMeleeStrength(DamageSource source) {
+        return source instanceof EpicFightDamageSource
+                && source.getEntity() instanceof EntityNPCInterface npc
+                && source.getDirectEntity() == npc
+                && !source.is(EpicFightDamageTypeTags.EXECUTION)
+                && AddonConfig.NPC_DAMAGE_USE_MELEE_STRENGTH.get();
+    }
+
     /**
      * @param patch          the attacking NPC's patch
      * @param incomingDamage the amount handed to {@code getModifiedBaseDamage}
@@ -50,8 +61,7 @@ public final class NpcDamageModel {
             return modifiedDamage;
         }
 
-        // 默认模式在伤害源的最终计算出口挂钩近战值，此处不再分配两手武器属性列表。
-        // 弹射物不走本旧武器叠加模型，保留其原始伤害。
+        // 默认近战在有 source 上下文的调用点跳过此层；弹射物/处决保留 EF 原结果。
         if (AddonConfig.NPC_DAMAGE_USE_MELEE_STRENGTH.get()) {
             return modifiedDamage;
         }

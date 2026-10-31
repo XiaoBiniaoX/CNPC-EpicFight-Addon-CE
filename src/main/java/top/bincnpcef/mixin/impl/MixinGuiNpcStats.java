@@ -30,6 +30,14 @@ public class MixinGuiNpcStats {
     @Shadow(remap = false) private DataStats stats;
     @Unique private boolean cnpcef$speedChanged;
 
+    @Inject(method = "save", at = @At("HEAD"), remap = false)
+    private void cnpcef$commitInputs(CallbackInfo ci) {
+        GuiBasic gui = (GuiBasic) (Object) this;
+        // Esc/快捷保存不一定先触发失焦；保存前显式提交两框。
+        if (gui.getTextField(DESIRE_ID) != null) cnpcef$apply(gui.getTextField(DESIRE_ID), ci);
+        if (gui.getTextField(SPEED_ID) != null) cnpcef$apply(gui.getTextField(SPEED_ID), ci);
+    }
+
     @Inject(method = "init", at = @At("TAIL"))
     private void cnpcef$inputs(CallbackInfo ci) {
         GuiBasic gui = (GuiBasic) (Object) this;

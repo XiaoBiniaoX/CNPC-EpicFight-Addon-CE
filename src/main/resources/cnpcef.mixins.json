@@ -7,6 +7,16 @@
   "mixins": [
     "IAttachmentEntityPatchProvider",
     "impl.MixinDataDisplay",
+    "impl.MixinDataMelee",
+    "impl.MixinAttackAnimationSpeed",
+    "impl.MixinEntityAIAttackTarget",
+    "impl.MixinCombatBehaviorsDesire",
+    "impl.MixinEpicFightDamageSource",
+    "impl.MixinNpcBaseDamage",
+    "impl.MixinNpcPatchRouting",
+    "impl.MixinNpcWeaponMotions",
+    "impl.MixinAnimationClip",
+    "impl.IServerAnimatorQueue",
     "impl.MixinEntityNpcInterface",
     "impl.MixinEntityAIRangedAttack",
     "impl.MixinLivingEntityHurt",
@@ -17,6 +27,11 @@
     "impl.ICustomHumanoidMobPatchProvider"
   ],
   "client": [
+    "impl.MixinGuiNpcStats",
+    "impl.MixinNpcCorpsePose",
+    "impl.IClientAnimatorMotions",
+    "impl.IBaseLayerPriority",
+    "impl.ILayerAnimationQueue",
     "impl.MixinRenderEngine",
     "impl.MixinGuiCreationEntities",
     "impl.IMixinRenderEngine"

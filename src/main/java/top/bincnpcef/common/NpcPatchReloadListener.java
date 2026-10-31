@@ -1,54 +1,60 @@
 package top.bincnpcef.common;
 
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import noppes.npcs.CustomEntities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import top.bincnpcef.client.render.RenderStorage;
+import top.bincnpcef.common.network.SPDatapackSync;
 import yesman.epicfight.api.data.reloader.MobPatchReloadListener;
-import yesman.epicfight.world.capabilities.EpicFightCapabilities;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import net.minecraft.world.entity.Entity;
 
-public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
+public class NpcPatchReloadListener implements PreparableReloadListener {
     private static final Logger LOGGER = LoggerFactory.getLogger("CNPC-EF-Addon");
     public static final String DIRECTORY = "npc_epicfight_mobpatch";
     private static final ResourceLocation FORCED_ARMATURE = ResourceLocation.parse("epicfight:entity/biped");
 
-    public static Set<ResourceLocation> AVAILABLE_MODELS = new java.util.HashSet<>();
-    public static Map<ResourceLocation, CompoundTag> TAGMAP = new HashMap<>();
-    public static CnpcBranchPatchProvider branchPatchProvider = new CnpcBranchPatchProvider();
-    public static Map<ResourceLocation, String> loadErrors = new HashMap<>();
-
-    public NpcPatchReloadListener() {
-        super(new GsonBuilder().create(), DIRECTORY);
-    }
+    // 单机逻辑服务端与客户端不共享 provider/数据，代际一次发布。
+    private record Snapshot(CnpcBranchPatchProvider provider, Map<ResourceLocation, CompoundTag> tags,
+                            Map<ResourceLocation, String> errors) {}
+    private static volatile Snapshot server = new Snapshot(new CnpcBranchPatchProvider(), Map.of(), Map.of());
+    private static volatile Snapshot client = new Snapshot(new CnpcBranchPatchProvider(), Map.of(), Map.of());
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> objectIn, ResourceManager resourceManager, ProfilerFiller profiler) {
+    public CompletableFuture<Void> reload(PreparationBarrier barrier, ResourceManager resources,
+                                          ProfilerFiller preparationProfiler, ProfilerFiller applyProfiler,
+                                          Executor preparationExecutor, Executor applyExecutor) {
+        return NpcJsonPreparation.prepare(resources, DIRECTORY, new GsonBuilder().create(), preparationExecutor)
+                .thenCompose(barrier::wait).thenAcceptAsync(entries -> apply(entries, resources), applyExecutor);
+    }
+
+    private void apply(List<NpcJsonPreparation.Entry> entries, ResourceManager resourceManager) {
         Set<ResourceLocation> tempModels = new java.util.HashSet<>();
-        Map<ResourceLocation, CompoundTag> tempTags = new HashMap<>();
+        Map<ResourceLocation, CompoundTag> tempTags = new LinkedHashMap<>();
         CnpcBranchPatchProvider tempProvider = new CnpcBranchPatchProvider();
         Map<ResourceLocation, String> tempErrors = new HashMap<>();
 
-        LOGGER.info("Loading NPC EF mobpatches, found {} entries", objectIn.size());
+        LOGGER.info("Loading NPC EF mobpatches, found {} entries", entries.size());
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
-            ResourceLocation rl = entry.getKey();
+        for (NpcJsonPreparation.Entry entry : entries) {
+            ResourceLocation rl = entry.id();
             try {
-                CompoundTag tag = TagParser.parseTag(entry.getValue().toString());
+                if (entry.error() != null) throw entry.error();
+                CompoundTag tag = entry.tag();
                 tag.putString("armature", FORCED_ARMATURE.toString());
                 normalizeAttributeTypes(tag);
 
@@ -57,31 +63,26 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                     MobPatchReloadListener.deserializeMobPatchProvider(
                         CustomEntities.entityCustomNpc, tag, clientSide, resourceManager);
 
-                tempProvider.addProvider(rl, provider);
+                tempProvider.addProvider(rl, provider, tag);
                 tempModels.add(rl);
                 tempTags.put(rl, MobPatchReloadListener.filterClientData(tag));
             } catch (Exception e) {
-                tempErrors.put(rl, e.getMessage());
+                tempErrors.put(rl, e.toString());
                 LOGGER.error("Failed to load mobpatch {}", rl, e);
             }
         }
 
-        AVAILABLE_MODELS = tempModels;
-        TAGMAP = tempTags;
-        branchPatchProvider = tempProvider;
-        loadErrors = tempErrors;
+        server = new Snapshot(tempProvider, java.util.Collections.unmodifiableMap(tempTags), Map.copyOf(tempErrors));
 
-        EpicFightCapabilities.ENTITY_PATCH_PROVIDER.putCustomEntityPatch(
-            CustomEntities.entityCustomNpc, entity -> branchPatchProvider.get(entity));
-
-        RenderStorage.registerRenderers(tempProvider, tempTags);
         LOGGER.info("NPC EF mobpatch reload complete: {} models loaded, {} errors", tempModels.size(), tempErrors.size());
     }
 
     public static void processServerPacket(List<ResourceLocation> modelIds, List<CompoundTag> tags) {
         CnpcBranchPatchProvider tempProvider = new CnpcBranchPatchProvider();
         Set<ResourceLocation> tempModels = new java.util.HashSet<>();
-        Map<ResourceLocation, CompoundTag> tempTags = new HashMap<>();
+        Map<ResourceLocation, CompoundTag> tempTags = new LinkedHashMap<>();
+        Map<ResourceLocation, String> errors = new HashMap<>();
+        if (modelIds.size() != tags.size()) throw new IllegalArgumentException("Mismatched NPC model/tag lists");
 
         for (int i = 0; i < modelIds.size(); i++) {
             ResourceLocation rl = modelIds.get(i);
@@ -95,34 +96,42 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                     MobPatchReloadListener.deserializeMobPatchProvider(
                         CustomEntities.entityCustomNpc, fullTag, true, null);
 
-                tempProvider.addProvider(rl, provider);
+                tempProvider.addProvider(rl, provider, fullTag);
                 tempModels.add(rl);
-                tempTags.put(rl, tag);
+                tempTags.put(rl, tag.copy());
             } catch (Exception e) {
+                errors.put(rl, e.toString());
                 LOGGER.error("Failed to process server packet for mobpatch {}", rl, e);
             }
         }
 
-        AVAILABLE_MODELS = tempModels;
-        TAGMAP = tempTags;
-        branchPatchProvider = tempProvider;
+        client = new Snapshot(tempProvider, java.util.Collections.unmodifiableMap(tempTags), Map.copyOf(errors));
 
-        EpicFightCapabilities.ENTITY_PATCH_PROVIDER.putCustomEntityPatch(
-            CustomEntities.entityCustomNpc, entity -> branchPatchProvider.get(entity));
-
-        RenderStorage.registerRenderers(tempProvider, tempTags);
     }
 
-    public static List<ResourceLocation> getModelIdList() {
-        return new ArrayList<>(AVAILABLE_MODELS);
+    public static CnpcBranchPatchProvider providerFor(Entity entity) {
+        return (entity.level().isClientSide() ? client : server).provider();
     }
 
-    public static List<CompoundTag> getTagList() {
-        List<CompoundTag> list = new ArrayList<>();
-        for (ResourceLocation rl : AVAILABLE_MODELS) {
-            list.add(TAGMAP.get(rl));
-        }
-        return list;
+    public static Set<ResourceLocation> clientModels() {
+        return client.tags().keySet();
+    }
+
+    public static Map<ResourceLocation, CompoundTag> clientTags() {
+        var copy = new LinkedHashMap<ResourceLocation, CompoundTag>();
+        client.tags().forEach((id, tag) -> copy.put(id, tag.copy()));
+        return copy;
+    }
+
+    public static SPDatapackSync syncPacket() {
+        Snapshot snapshot = server;
+        var ids = new ArrayList<ResourceLocation>();
+        var tags = new ArrayList<CompoundTag>();
+        snapshot.tags().forEach((id, tag) -> {
+            ids.add(id);
+            tags.add(tag.copy());
+        });
+        return new SPDatapackSync(ids, tags);
     }
 
     /**

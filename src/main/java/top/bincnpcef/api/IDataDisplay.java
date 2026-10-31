@@ -20,4 +20,6 @@ public interface IDataDisplay {
     float cnpcef$getAnimSpeed();
 
     void cnpcef$setAnimSpeed(float value);
+
+    void cnpcef$refreshModelCap();
 }
