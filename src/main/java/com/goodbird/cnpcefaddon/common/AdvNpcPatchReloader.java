@@ -7,18 +7,14 @@ import com.goodbird.cnpcefaddon.common.provider.INpcPatchProvider;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.nameless.indestructible.api.animation.types.LivingEntityPatchEvent;
 import com.nameless.indestructible.data.AdvancedMobpatchReloader;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraftforge.registries.ForgeRegistries;
 import noppes.npcs.CustomEntities;
@@ -38,22 +34,19 @@ import yesman.epicfight.world.capabilities.provider.EntityPatchProvider;
 import yesman.epicfight.world.damagesource.StunType;
 
 import com.mojang.datafixers.util.Pair;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.util.GsonHelper;
 
-public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
+public class AdvNpcPatchReloader extends NpcJsonReloadListener {
     private static final Gson GSON = (new GsonBuilder()).create();
     private static final Logger LOGGER = LoggerFactory.getLogger(AdvNpcPatchReloader.class);
 
     public AdvNpcPatchReloader() {
-        super(GSON, "adv_npc_epicfight_mobpatch");
+        super(GSON, "adv_npc_epicfight_mobpatch", ResourceLocation.parse("customnpcs:samurai"));
     }
 
     /**
@@ -97,7 +90,8 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         }
     }
 
-    protected void apply(Map<ResourceLocation, JsonElement> objectIn, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
+    @Override
+    protected void apply(Prepared prepared, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
 
         // The bow draw / crossbow charge animations are shared globals; the slowdown
         // modifier goes on once per reload (idempotent) so NPC draws match their fire rate.
@@ -120,11 +114,11 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
         }
         OWNED_KEYS.clear();
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
+        for (var entry : prepared.entries().entrySet()) {
             CompoundTag tag = null;
             try {
-                tag = TagParser.parseTag((entry.getValue()).toString());
-            } catch (CommandSyntaxException e) {
+                tag = entry.getValue().getOrThrow();
+            } catch (Exception e) {
                 LOGGER.error("Failed to parse Adv NPC EpicFight mobpatch data for {}: {}", entry.getKey(), e.getMessage());
                 // loadErrors 是 ConcurrentHashMap，拒绝 null 值；getMessage() 对 NPE 等返回 null。
                 NpcPatchReloadListener.loadErrors.put(entry.getKey(), NpcPatchReloadListener.describeError(e));
@@ -154,13 +148,9 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
             // 正常回退流程，不是错误：内置模型未随数据包加载时直接读内置资源。
             // 真正失败会在下面两处 catch 里报 error。
             try {
-                ResourceLocation filePath = ResourceLocation.fromNamespaceAndPath(
-                    samuraiKey.getNamespace(), "adv_npc_epicfight_mobpatch/" + samuraiKey.getPath() + ".json");
-                List<Resource> stack = resourceManagerIn.getResourceStack(filePath);
-                for (int i = stack.size() - 1; i >= 0; i--) {
-                    try (Reader reader = stack.get(i).openAsReader()) {
-                        JsonElement element = GsonHelper.fromJson(GSON, reader, JsonElement.class);
-                        CompoundTag tag = TagParser.parseTag(element.toString());
+                for (ParsedTag fallback : prepared.fallbacks().get(samuraiKey)) {
+                    try {
+                        CompoundTag tag = fallback.getOrThrow();
                         PlaySpeedCache.parseAndRegister(samuraiKey, tag);
                         AdvNpcPatchProvider provider = deserializeMobPatchProvider(resourceManagerIn, tag, false);
                         CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
@@ -171,10 +161,10 @@ public class AdvNpcPatchReloader  extends SimpleJsonResourceReloadListener {
                             RenderStorage.registerRenderer(samuraiKey, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
                         tempProviders.add(new Pair<>(new ResLocPredicate(samuraiKey), provider));
                         tempModels.add(samuraiKey);
-                         tempTags.put(samuraiKey, filteredTag);
-                         break;
-                     } catch (Exception e) {
-                         LOGGER.error("Fallback attempt for {} failed: {}", samuraiKey, e.getMessage());
+                        tempTags.put(samuraiKey, filteredTag);
+                        break;
+                    } catch (Exception e) {
+                        LOGGER.error("Fallback attempt for {} failed: {}", samuraiKey, e.getMessage());
                     }
                 }
             } catch (Exception e) {

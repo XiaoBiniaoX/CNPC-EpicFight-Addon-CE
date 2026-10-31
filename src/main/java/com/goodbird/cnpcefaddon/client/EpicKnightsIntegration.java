@@ -1,6 +1,7 @@
 package com.goodbird.cnpcefaddon.client;
 
 import net.minecraftforge.fml.ModList;
+import yesman.epicfight.client.renderer.patched.entity.PatchedEntityRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,15 @@ public final class EpicKnightsIntegration {
             EpicKnightsNpcLayerInstaller.install();
         } catch (Throwable t) {
             // 可选装饰层失败不能影响 NPC 主模型、盔甲本体或服务端。
+            LOGGER.error("[cnpcef-fix] 史诗骑士可选盔甲装饰兼容失败；NPC 将继续渲染但可能缺少头盔装饰", t);
+        }
+    }
+
+    public static void installNpcArmorDecorationLayer(PatchedEntityRenderer renderer) {
+        if (!isLoaded()) return;
+        try {
+            EpicKnightsNpcLayerInstaller.install(renderer);
+        } catch (Throwable t) {
             LOGGER.error("[cnpcef-fix] 史诗骑士可选盔甲装饰兼容失败；NPC 将继续渲染但可能缺少头盔装饰", t);
         }
     }

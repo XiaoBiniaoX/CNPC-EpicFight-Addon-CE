@@ -12,16 +12,12 @@ import com.goodbird.cnpcefaddon.mixin.impl.ICustomMobPatchProvider;
 import net.minecraft.network.chat.Component;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
@@ -45,7 +41,6 @@ import yesman.epicfight.world.capabilities.entitypatch.EntityPatch;
 import yesman.epicfight.world.capabilities.entitypatch.Faction;
 import yesman.epicfight.world.capabilities.provider.EntityPatchProvider;
 
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -56,14 +51,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import net.minecraft.server.packs.resources.Resource;
-import net.minecraft.util.GsonHelper;
 import yesman.epicfight.api.animation.AnimationManager;
 
 import java.util.ArrayList;
-import java.util.List;
 
-public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
+public class NpcPatchReloadListener extends NpcJsonReloadListener {
     private static final Gson GSON = (new GsonBuilder()).create();
     private static final Logger LOGGER = LoggerFactory.getLogger(NpcPatchReloadListener.class);
 
@@ -89,10 +81,12 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
     public static final Map<ResourceLocation, String> loadErrors = new ConcurrentHashMap<>();
 
     public NpcPatchReloadListener() {
-        super(GSON, "npc_epicfight_mobpatch");
+        super(GSON, "npc_epicfight_mobpatch", ResourceLocation.parse("customnpcs:customnpc"),
+                ResourceLocation.parse("customnpcs:customnpc_alex"), ResourceLocation.parse("customnpcs:skeleton"));
     }
 
-    protected void apply(Map<ResourceLocation, JsonElement> objectIn, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
+    @Override
+    protected void apply(Prepared prepared, ResourceManager resourceManagerIn, ProfilerFiller profilerIn) {
 
         NpcBranchPatchProvider tempProvider = new NpcBranchPatchProvider();
         Set<ResourceLocation> tempModels = new HashSet<>();
@@ -106,18 +100,19 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         // Full wipe is safe here: this listener runs before AdvNpcPatchReloader, which
         // re-registers its own patches right after. parseAndRegister() also clears per key.
         PlaySpeedCache.clear();
+        Map<ResourceLocation, ?> animations = AnimationManager.getInstance().getAnimations(a -> true);
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : objectIn.entrySet()) {
+        for (var entry : prepared.entries().entrySet()) {
             CompoundTag tag = null;
             try {
-                tag = TagParser.parseTag((entry.getValue()).toString());
-            } catch (CommandSyntaxException e) {
+                tag = entry.getValue().getOrThrow();
+            } catch (Exception e) {
                 LOGGER.error("Failed to parse NPC EpicFight mobpatch data for {}: {}", entry.getKey(), e.getMessage());
                 loadErrors.put(entry.getKey(), describeError(e));
             }
             if (tag != null) {
                 try {
-                    validateAnimationReferences(entry.getKey(), tag);
+                    validateAnimationReferences(animations, tag);
                     PlaySpeedCache.parseAndRegister(entry.getKey(), tag);
                     MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
                     CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
@@ -146,13 +141,9 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         for (ResourceLocation key : builtinKeys) {
             if (!tempModels.contains(key)) {
                 try {
-                    ResourceLocation filePath = ResourceLocation.fromNamespaceAndPath(
-                        key.getNamespace(), "npc_epicfight_mobpatch/" + key.getPath() + ".json");
-                    List<Resource> stack = resourceManagerIn.getResourceStack(filePath);
-                    for (int i = stack.size() - 1; i >= 0; i--) {
-                        try (Reader reader = stack.get(i).openAsReader()) {
-                            JsonElement element = GsonHelper.fromJson(GSON, reader, JsonElement.class);
-                            CompoundTag tag = TagParser.parseTag(element.toString());
+                    for (ParsedTag fallback : prepared.fallbacks().get(key)) {
+                        try {
+                            CompoundTag tag = fallback.getOrThrow();
                             PlaySpeedCache.parseAndRegister(key, tag);
                             MobPatchReloadListener.AbstractMobPatchProvider provider = deserializeMobPatchProvider(tag, false, resourceManagerIn);
                             CompoundTag filteredTag = MobPatchReloadListener.filterClientData(tag);
@@ -163,10 +154,10 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                                 RenderStorage.registerRenderer(key, tag.contains("preset") ? tag.getString("preset") : tag.getString("renderer"), tag);
                             tempProvider.addProvider(key, provider);
                             tempModels.add(key);
-                             tempTags.put(key, filteredTag);
-                             break;
-                         } catch (Exception e) {
-                             LOGGER.error("Failed fallback attempt for {}: {}", key, e.getMessage());
+                            tempTags.put(key, filteredTag);
+                            break;
+                        } catch (Exception e) {
+                            LOGGER.error("Failed fallback attempt for {}: {}", key, e.getMessage());
                         }
                     }
                 } catch (Exception e) {
@@ -298,9 +289,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
      * Skipped when the animation registry has not been loaded yet (it would report every
      * animation as missing and reject every pack).
      */
-    private static void validateAnimationReferences(ResourceLocation key, CompoundTag tag) {
-        java.util.Map<ResourceLocation, ?> table = AnimationManager.getInstance().getAnimations(a -> true);
-
+    private static void validateAnimationReferences(Map<ResourceLocation, ?> table, CompoundTag tag) {
         if (table == null || table.isEmpty()) {
             return;
         }
@@ -380,6 +369,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
         Set<ResourceLocation> tempModels = new HashSet<>();
         Map<ResourceLocation, PatchedEntityRenderer> oldRenderers = RenderStorage.renderersMap;
         RenderStorage.renderersMap = new HashMap<>();
+        Map<ResourceLocation, ?> animations = AnimationManager.getInstance().getAnimations(a -> true);
 
         for (CompoundTag tag : packet.getTags()) {
             if (tag == null) continue;
@@ -391,7 +381,7 @@ public class NpcPatchReloadListener extends SimpleJsonResourceReloadListener {
                 } else {
                     PlaySpeedCache.parseAndRegister(key, tag);
                 }
-                validateAnimationReferences(key, tag);
+                validateAnimationReferences(animations, tag);
                 boolean disabled = tag.contains("disabled") && tag.getBoolean("disabled");
                 MobPatchReloadListener.AbstractMobPatchProvider provider;
                 if (CeNpcPatchOptional.isCeTag(tag)) {

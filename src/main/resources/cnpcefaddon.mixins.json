@@ -41,6 +41,9 @@
     "MixinServerAnimator"
   ],
   "client": [
+    "IAnimatorRevival",
+    "IBaseLayerPriority",
+    "ILayerAnimationQueue",
     "IMixinRenderEngine",
     "MixinAdvanceHealthBar",
     "MixinCustomGuiEntityDisplay",

@@ -44,6 +44,8 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
     private boolean guardDecisionKeep;
     private String livingMotionKey;
     private boolean clientGuardState;
+    /** 仅记录运行时空闲纠正；追踪/装备同步后必须重新纠正，不写入旧存档。 */
+    private boolean idleGuardCleared;
     private final java.util.Set<java.util.UUID> musicSyncedPlayers = new java.util.HashSet<>();
 
     public CeNpcPatch(CeNpcPatchProvider provider) {
@@ -89,6 +91,7 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
     @Override
     public void onStartTracking(ServerPlayer player) {
         super.onStartTracking(player);
+        idleGuardCleared = false;
         // CNPC replaces the EF capability after the entity is already tracked. CE's normal
         // tracking hook therefore ran before this patch existed, so its boss bar never got
         // the player added.
@@ -288,6 +291,7 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
         if (this.isLogicalClient() || this.original == null) {
             return;
         }
+        idleGuardCleared = false;
         yesman.epicfight.network.server.SPChangeLivingMotion packet =
                 new yesman.epicfight.network.server.SPChangeLivingMotion(this.original.getId());
         packet.putEntries(this.getAnimator().getLivingAnimations().entrySet());
@@ -615,6 +619,10 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
 
     private void clearStaleGuardState() {
         try {
+            if (!this.isLogicalClient() && (this.getTarget() != null
+                    || CEPatchUtils.isGuard(this) || CEPatchUtils.isInCounter(this))) {
+                idleGuardCleared = false;
+            }
             CEAnimationAttackGoal<?> goal = findAttackGoal();
             CECombatBehaviors.Behavior<?> current = goal == null ? null : goal.getCombatBehaviors().getCurrentBehavior();
             boolean currentGuard = current != null
@@ -630,7 +638,13 @@ public final class CeNpcPatch extends CEDatapackMobPatch implements INpcPatch {
             }
 
             if (!this.isLogicalClient() && this.getTarget() == null) {
-                stopGuardAnimation();
+                // 首次/状态转换仍广播，以纠正客户端独有的残留。稳定空闲不重复发送。
+                // terminate 只设 isEnd，不移除动画；父 tick 若重播了 Link/预留格挡，仍需再停。
+                if (!idleGuardCleared || (isGuardAnimationPlaying()
+                        && !this.getAnimator().getPlayerFor(null).isEnd())) {
+                    stopGuardAnimation();
+                    idleGuardCleared = true;
+                }
                 CEPatchUtils.setGuard(this, false);
                 CEPatchUtils.setInCounter(this, false);
             } else if (isGuardAnimationPlaying() && !CEPatchUtils.isGuard(this) && !CEPatchUtils.isInCounter(this)) {

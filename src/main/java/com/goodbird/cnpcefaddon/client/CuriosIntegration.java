@@ -1,6 +1,7 @@
 package com.goodbird.cnpcefaddon.client;
 
 import net.minecraftforge.fml.ModList;
+import yesman.epicfight.client.renderer.patched.entity.PatchedEntityRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,15 @@ public final class CuriosIntegration {
 
         try {
             CuriosNpcLayerInstaller.install();
+        } catch (Throwable t) {
+            LOGGER.error("[cnpcef-fix] curios optional support failed; NPC models keep rendering without accessories", t);
+        }
+    }
+
+    public static void installNpcAccessoryLayer(PatchedEntityRenderer renderer) {
+        if (!isLoaded()) return;
+        try {
+            CuriosNpcLayerInstaller.install(renderer);
         } catch (Throwable t) {
             LOGGER.error("[cnpcef-fix] curios optional support failed; NPC models keep rendering without accessories", t);
         }

@@ -69,8 +69,8 @@ public class CNPCEpicFightAddon {
 
     private void onDatapackSync(OnDatapackSyncEvent event) {
         ServerPlayer player = event.getPlayer();
-        SPDatapackSync mobPatchPacket = new SPDatapackSync(NpcPatchReloadListener.TAGMAP.size());
         var tags = NpcPatchReloadListener.getDataStream().toList();
+        SPDatapackSync mobPatchPacket = new SPDatapackSync(tags.size());
         for (CompoundTag tag : tags) {
             mobPatchPacket.write(tag);
         }

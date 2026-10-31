@@ -151,7 +151,7 @@ dependencies {
     implementation fg.deobf('lib:epic-fight:20.14.17-mc1.20.1-forge')
     implementation fg.deobf('lib:indestructible:20.12.0')
     compileOnly fg.deobf('lib:curios-forge:5.14.1+1.20.1')
-    compileOnly fg.deobf('lib:YSM_EpicFight_Compat:1.20.1-1.8.0-all')
+    compileOnly fg.deobf('lib:YSM_EpicFight_Compat:1.20.1-1.10.3-all')
     compileOnly fg.deobf('lib:epic-knights:1.20.1-forge-10.11')
     compileOnly fg.deobf('lib:fantasy_armor:1.2.4-1.20.1')
     compileOnly fg.deobf('lib:CombatEvolution:2.2.6')

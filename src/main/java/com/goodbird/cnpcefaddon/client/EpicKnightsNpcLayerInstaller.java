@@ -26,17 +26,16 @@ final class EpicKnightsNpcLayerInstaller {
     /** 为已创建的全部人形 CNPC 渲染器安装官方装饰层。 */
     static void install() {
         for (PatchedEntityRenderer renderer : RenderStorage.renderersMap.values()) {
-            if (!(renderer instanceof PatchedLivingEntityRenderer<?, ?, ?, ?, ?> livingRenderer)
-                    || !(renderer.getDefaultMesh().get() instanceof HumanoidMesh)) {
-                continue;
-            }
-
-            // 泛型参数与史诗骑士自己的 ClientEpicFightCompat 注册点相同；CNPC 的人形
-            // renderer 同样使用 LivingEntity / LivingEntityPatch，Java 的通配符无法表达该关系。
-            @SuppressWarnings({"rawtypes", "unchecked"})
-            PatchedLivingEntityRenderer rawRenderer = (PatchedLivingEntityRenderer) livingRenderer;
-            rawRenderer.addPatchedLayerAlways(ArmorDecorationLayer.class,
-                    new PatchedArmorDecorationLayer<>(Meshes.BIPED));
+            install(renderer);
         }
+    }
+
+    static void install(PatchedEntityRenderer renderer) {
+        if (!(renderer instanceof PatchedLivingEntityRenderer<?, ?, ?, ?, ?> livingRenderer)
+                || !(renderer.getDefaultMesh().get() instanceof HumanoidMesh)) return;
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        PatchedLivingEntityRenderer rawRenderer = (PatchedLivingEntityRenderer) livingRenderer;
+        rawRenderer.addPatchedLayerAlways(ArmorDecorationLayer.class,
+                new PatchedArmorDecorationLayer<>(Meshes.BIPED));
     }
 }

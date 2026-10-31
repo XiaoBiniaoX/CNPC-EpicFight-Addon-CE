@@ -1,6 +1,7 @@
 package com.goodbird.cnpcefaddon.mixin.impl;
 
 import com.goodbird.cnpcefaddon.api.IDataMeleeAttackDesire;
+import it.unimi.dsi.fastutil.ints.IntList;
 import noppes.npcs.entity.EntityNPCInterface;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -9,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import yesman.epicfight.world.capabilities.entitypatch.MobPatch;
 import yesman.epicfight.world.entity.ai.goal.CombatBehaviors;
 
@@ -143,31 +145,21 @@ public abstract class MixinCombatBehaviors {
     }
 
     /**
-     * Replaces a -1 result caused by float rounding with the last valid candidate.
-     * Genuine "nothing is selectable" cases still return -1, because the fallback only
-     * triggers when the vanilla scan found candidates.
+     * Reuses the vanilla scan's candidates for the existing highest-weight fallback.
+     * Never rerolls random/custom predicates, including when nothing was selectable.
+     * TAIL is only the final -1 return; successful weighted draws are untouched.
      */
-    @Inject(method = "getRandomCombatBehaviorSeries", at = @At("RETURN"), cancellable = true)
-    private void cnpcef$avoidRoundingFallthrough(CallbackInfoReturnable<Integer> cir) {
-        if (cir.getReturnValueI() >= 0) {
-            return;
-        }
-
+    @Inject(method = "getRandomCombatBehaviorSeries", at = @At("TAIL"), cancellable = true,
+            locals = LocalCapture.CAPTURE_FAILHARD)
+    private void cnpcef$avoidRoundingFallthrough(CallbackInfoReturnable<Integer> cir,
+            IntList candidates) {
         int fallback = -1;
         float bestWeight = -1.0F;
 
-        for (int i = 0; i < this.behaviorSeriesList.size(); i++) {
-            if (i == this.currentBehaviorPointer) {
-                continue;
-            }
-
+        for (int i : candidates) {
             CombatBehaviors.BehaviorSeries<?> series = this.behaviorSeriesList.get(i);
 
             if (!(series instanceof IBehaviorSeriesPointer accessor)) {
-                continue;
-            }
-
-            if (!this.cnpcef$canBeSelected(series)) {
                 continue;
             }
 
@@ -197,16 +189,6 @@ public abstract class MixinCombatBehaviors {
                     pointer.cnpcef$setLoopFinished(false);
                 }
             }
-        }
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private boolean cnpcef$canBeSelected(CombatBehaviors.BehaviorSeries<?> series) {
-        try {
-            MobPatch<?> patch = ((ICombatBehaviorsOwner) this).cnpcef$getMobPatch();
-            return ((CombatBehaviors.BehaviorSeries) series).canBeSelected(patch);
-        } catch (Throwable ignored) {
-            return false;
         }
     }
 

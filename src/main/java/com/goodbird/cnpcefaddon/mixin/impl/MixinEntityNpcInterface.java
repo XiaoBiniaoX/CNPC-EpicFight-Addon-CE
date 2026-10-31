@@ -7,6 +7,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.item.Item;
 import noppes.npcs.ai.EntityAIRangedAttack;
 import noppes.npcs.entity.EntityNPCInterface;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,7 +24,9 @@ import yesman.epicfight.world.capabilities.entitypatch.LivingEntityPatch;
 public class MixinEntityNpcInterface extends PathfinderMob {
 
     @Unique
-    private String cnpcef$lastServerEquipment;
+    private Item cnpcef$lastMainItem;
+    @Unique
+    private Item cnpcef$lastOffItem;
 
     protected MixinEntityNpcInterface(EntityType<? extends PathfinderMob> p_21683_, Level p_21684_) {
         super(p_21683_, p_21684_);
@@ -38,10 +41,11 @@ public class MixinEntityNpcInterface extends PathfinderMob {
         // PacketNpcUpdate path. Vanilla equipment tracking therefore does not reliably update
         // the client-side EF capability after a script/command changes the hand item.
         if (!npc.level().isClientSide()) {
-            String equipment = npc.getMainHandItem().getItem().toString() + "|"
-                    + npc.getOffhandItem().getItem().toString();
-            if (!equipment.equals(cnpcef$lastServerEquipment)) {
-                cnpcef$lastServerEquipment = equipment;
+            Item main = npc.getMainHandItem().getItem();
+            Item off = npc.getOffhandItem().getItem();
+            if (main != cnpcef$lastMainItem || off != cnpcef$lastOffItem) {
+                cnpcef$lastMainItem = main;
+                cnpcef$lastOffItem = off;
                 npc.updateClient = true;
                 npc.updateAI = true;
             }

@@ -49,22 +49,17 @@ final class CuriosNpcLayerInstaller {
         for (var entry : RenderStorage.renderersMap.entrySet()) {
             PatchedEntityRenderer renderer = entry.getValue();
 
-            if (!(renderer instanceof PatchedLivingEntityRenderer)) {
-                continue;
-            }
-
-            // Raw type mirrors how Epic Fight registers this very adapter: the layer is typed for
-            // LivingEntity / LivingEntityPatch, which every NPC renderer here satisfies, but the
-            // renderer's own wildcards cannot express that through the generic signature.
-            @SuppressWarnings({"rawtypes", "unchecked"})
-            PatchedLivingEntityRenderer livingRenderer = (PatchedLivingEntityRenderer) renderer;
-
-            // addPatchedLayerAlways overwrites an existing entry, so a repeated reload cannot
-            // stack duplicate accessory draws.
-            livingRenderer.addPatchedLayerAlways(CuriosLayer.class, new CuriosCompat.PatchedCuriosLayerRenderer());
-            installed++;
+            if (install(renderer)) installed++;
         }
 
         return installed;
+    }
+
+    static boolean install(PatchedEntityRenderer renderer) {
+        if (!(renderer instanceof PatchedLivingEntityRenderer)) return false;
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        PatchedLivingEntityRenderer livingRenderer = (PatchedLivingEntityRenderer) renderer;
+        livingRenderer.addPatchedLayerAlways(CuriosLayer.class, new CuriosCompat.PatchedCuriosLayerRenderer());
+        return true;
     }
 }

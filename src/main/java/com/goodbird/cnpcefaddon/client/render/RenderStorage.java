@@ -57,10 +57,10 @@ public class RenderStorage {
         // Epic Fight installs its Curios accessory adapter on the player renderer only, so the
         // renderer just built would show no accessories. Done here rather than at the four
         // reload call sites, so every registration path is covered once.
-        CuriosIntegration.installNpcAccessoryLayer();
+        CuriosIntegration.installNpcAccessoryLayer(renderersMap.get(resourceLocation));
         // 史诗骑士的鸡冠、羽冠等装饰不是 HumanoidArmorLayer 的一部分；官方只给
         // Epic Fight 内置 renderer 注册对应骨骼层，CNPC 的数据包 renderer 必须在此补装。
-        EpicKnightsIntegration.installNpcArmorDecorationLayer();
+        EpicKnightsIntegration.installNpcArmorDecorationLayer(renderersMap.get(resourceLocation));
     }
 
 

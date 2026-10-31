@@ -4,13 +4,9 @@ import com.goodbird.cnpcefaddon.common.provider.CeNpcPatchProvider;
 import com.goodbird.cnpcefaddon.common.provider.NpcBranchPatchProvider;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -37,7 +33,7 @@ import java.util.Set;
  * 此 listener 仅负责把 CE 原生格式转换为 CE provider，再交给我方分支 provider；复杂字段
  * 全部调用 CE 自己的 public parser，确保行为树及以后 CE 的格式变动保持同一语义。
  */
-public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
+public final class CeNpcPatchReloader extends NpcJsonReloadListener {
     public static final String DIRECTORY = "ce_npc_epicfight_mobpatch";
     public static final String PATCH_TYPE = "COMBAT_EVOLUTION";
     /** 本 listener 在共享注册表里的归属标记，与 {@link CeNpcPatchOptional#PATCH_TYPE} 一致。 */
@@ -54,7 +50,7 @@ public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> entries, ResourceManager resourceManager, ProfilerFiller profiler) {
+    protected void apply(Prepared prepared, ResourceManager resourceManager, ProfilerFiller profiler) {
         // 两阶段提交：先把本轮全部条目解析进临时表，只有解析成功的键才在第二阶段换入共享注册表。
         //
         // 旧实现是「先按 OWNED_KEYS 删掉上一轮的 CE 条目，再逐条解析并逐条写回」，于是任何一条
@@ -64,9 +60,9 @@ public final class CeNpcPatchReloader extends SimpleJsonResourceReloadListener {
         Map<ResourceLocation, CeNpcPatchProvider> parsedProviders = new HashMap<>();
         Map<ResourceLocation, CompoundTag> parsedTags = new HashMap<>();
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : entries.entrySet()) {
+        for (var entry : prepared.entries().entrySet()) {
             try {
-                CompoundTag tag = TagParser.parseTag(entry.getValue().toString());
+                CompoundTag tag = entry.getValue().getOrThrow();
                 CeNpcPatchProvider provider = deserialize(tag);
                 // 数据包重载阶段用裸 armature 路径（与 CE 原生 :117 及我方 :195 一致）；
                 // 只有服务端→客户端同步那条路径才需要 animmodels/*.json 前缀。
