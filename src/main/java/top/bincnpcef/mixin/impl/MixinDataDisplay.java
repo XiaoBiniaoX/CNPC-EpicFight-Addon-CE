@@ -22,6 +22,9 @@ import yesman.epicfight.world.capabilities.entitypatch.HumanoidMobPatch;
 import yesman.epicfight.world.capabilities.provider.AttachmentEntityPatchProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import yesman.epicfight.world.capabilities.item.CapabilityItem;
 
 @Mixin(value = DataDisplay.class, priority = 1001)
 public class MixinDataDisplay implements IDataDisplay {
@@ -36,7 +39,11 @@ public class MixinDataDisplay implements IDataDisplay {
     @Unique private ResourceLocation cnpcef$boundModel;
     @Unique private CnpcBranchPatchProvider cnpcef$boundProvider;
     @Unique private EntityPatch<?> cnpcef$boundPatch;
-    @Unique private boolean cnpcef$bindingFailed;
+    @Unique private EntityPatch<?> cnpcef$weaponPatch;
+    @Unique private ItemStack cnpcef$mainhand = ItemStack.EMPTY;
+    @Unique private ItemStack cnpcef$offhand = ItemStack.EMPTY;
+    @Unique private CapabilityItem cnpcef$mainhandCap;
+    @Unique private CapabilityItem cnpcef$offhandCap;
 
     @Inject(method = "save", at = @At("HEAD"), remap = false)
     private void cnpcef$onSave(CompoundTag nbt, CallbackInfoReturnable<CompoundTag> cir) {
@@ -101,7 +108,20 @@ public class MixinDataDisplay implements IDataDisplay {
     private void cnpcef$updateClientWeaponMotions() {
         // readSpawnData 先装武器再读 display；同模型同步也需刷新站姿，不必重建 Animator。
         if (npc.level().isClientSide() && npc.getData(EpicFightAttachmentTypes.ENTITY_PATCH).getCapability()
-                instanceof HumanoidMobPatch<?> patch) patch.modifyLivingMotionByCurrentItem(false);
+                instanceof HumanoidMobPatch<?> patch) {
+            ItemStack mainhand = npc.getMainHandItem(), offhand = npc.getOffhandItem();
+            CapabilityItem mainCap = patch.getHoldingItemCapability(InteractionHand.MAIN_HAND);
+            CapabilityItem offCap = patch.getHoldingItemCapability(InteractionHand.OFF_HAND);
+            if (patch == cnpcef$weaponPatch && mainCap == cnpcef$mainhandCap && offCap == cnpcef$offhandCap
+                    && ItemStack.isSameItemSameComponents(mainhand, cnpcef$mainhand)
+                    && ItemStack.isSameItemSameComponents(offhand, cnpcef$offhand)) return;
+            patch.modifyLivingMotionByCurrentItem(false);
+            cnpcef$weaponPatch = patch;
+            cnpcef$mainhand = mainhand.copy();
+            cnpcef$offhand = offhand.copy();
+            cnpcef$mainhandCap = mainCap;
+            cnpcef$offhandCap = offCap;
+        }
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -119,31 +139,37 @@ public class MixinDataDisplay implements IDataDisplay {
                     && cnpcef$boundProvider == branch) {
                 // 第三方在同代替换 patch 时不反复争抢；下一代或显式换模型再重新安装。
                 if (provider.getCapability() != cnpcef$boundPatch) cnpcef$boundPatch = provider.getCapability();
-                if (cnpcef$bindingFailed || provider.getCapability() == cnpcef$boundPatch) return;
+                return;
             }
             if (cnpcef$efModel == null && cnpcef$boundModel == null) {
                 cnpcef$boundProvider = branch;
                 return;
             }
             EntityPatch<?> patch = branch.get(npc);
+            // construct 失败时保留旧 attachment，不能发布没有 Animator 的半成品。
+            if (patch != null) ((EntityPatch) patch).onConstructed(npc);
+            EntityPatch<?> previous = provider.getCapability();
             ((IAttachmentEntityPatchProvider) (Object) provider).cnpcef$setEntityPatch(patch);
             if (patch != null) {
-                ((EntityPatch) patch).onConstructed(npc);
-                // onJoinWorld 只在 NPC 已在世界中时调用（GUI 修改 efModel 的场景）
-                // 首次从 NBT 加载时由 EF 事件钩子自动调用
-                if (npc.level() != null && npc.tickCount > 0) {
-                    ((EntityPatch) patch).onJoinWorld(npc, npc.level(), false);
+                // tickCount 不能证明已加入世界（新加入/GUI 预览都可能为 0）。
+                // 已加入的热替换立即初始化；NBT/生成包早期安装留给 EF join 钩子。
+                try {
+                    if (npc.isAddedToLevel() && patch.uninitialized()) {
+                        ((EntityPatch) patch).onJoinWorld(npc, npc.level(), false);
+                    }
+                } catch (Exception e) {
+                    ((IAttachmentEntityPatchProvider) (Object) provider).cnpcef$setEntityPatch(previous);
+                    throw e;
                 }
+                cnpcef$updateClientWeaponMotions();
             }
             cnpcef$boundModel = cnpcef$efModel;
             cnpcef$boundProvider = branch;
             cnpcef$boundPatch = patch;
-            cnpcef$bindingFailed = false;
         } catch (Exception e) {
             // 失败按模型/代际缓存，避免坏模型在每 tick 重试并刷日志；重载后可重试。
             cnpcef$boundModel = cnpcef$efModel;
             cnpcef$boundProvider = branch;
-            cnpcef$bindingFailed = true;
             CNPCEF_LOGGER.error("Failed to bind NPC EF model {} for entity {}", cnpcef$efModel, npc.getId(), e);
         }
     }

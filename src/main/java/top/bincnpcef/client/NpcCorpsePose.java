@@ -49,9 +49,10 @@ public final class NpcCorpsePose {
         } else if (npc.stats.hideKilledBody) {
             restoredAnimator = null;
             pending = false;
-        } else if (npc.getHealth() <= 0.0F && restoredAnimator != animator) {
+        } else if (restoredAnimator != animator) {
             var death = animator.getLivingAnimation(LivingMotions.DEATH, null);
             if (!valid(death)) death = animator.getCompositeLivingMotion(LivingMotions.DEATH);
+            if (!valid(death)) death = Animations.BIPED_DEATH;
             if (!valid(death)) return;
             Layer layer = death.get().getLayerType() == Layer.LayerType.BASE_LAYER
                     ? animator.baseLayer : animator.getCompositeLayer(death.get().getPriority());
@@ -65,7 +66,7 @@ public final class NpcCorpsePose {
     }
 
     private static void recover(LivingEntityPatch<?> patch, ClientAnimator animator) {
-        var death = animator.getLivingAnimation(LivingMotions.DEATH, null);
+        var death = animator.getLivingAnimation(LivingMotions.DEATH, Animations.BIPED_DEATH);
         var compositeDeath = animator.getCompositeLivingMotion(LivingMotions.DEATH);
         animator.iterAllLayers(layer -> {
             boolean currentDeath = isDeath(layer.animationPlayer.getRealAnimation(), death, compositeDeath);
@@ -80,7 +81,8 @@ public final class NpcCorpsePose {
             if (replacement == null || isDeath(replacement, death, compositeDeath)) replacement = Animations.EMPTY_ANIMATION;
             layer.playAnimationInstantly(replacement, patch);
             if (layer == animator.baseLayer) {
-                ((IBaseLayerPriority) animator.baseLayer).cnpcef$setBaseLayerPriority(replacement.get().getPriority());
+                ((IBaseLayerPriority) animator.baseLayer).cnpcef$setBaseLayerPriority(
+                        replacement.get().getRealAnimation().get().getPriority());
             }
             if (layer != animator.baseLayer && replacement == Animations.EMPTY_ANIMATION) layer.disableLayer();
         });

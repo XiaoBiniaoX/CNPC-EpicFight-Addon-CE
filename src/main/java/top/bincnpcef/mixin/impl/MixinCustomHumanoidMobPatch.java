@@ -4,6 +4,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import noppes.npcs.entity.EntityNPCInterface;
+import top.bincnpcef.common.NpcDeathRecovery;
 import yesman.epicfight.api.animation.LivingMotions;
 import yesman.epicfight.world.capabilities.entitypatch.CustomHumanoidMobPatch;
 
@@ -29,6 +31,12 @@ public class MixinCustomHumanoidMobPatch {
     @Inject(method = "updateMotion", at = @At("TAIL"))
     private void cnpcef$fixStunMotion(boolean considerInaction, CallbackInfo ci) {
         CustomHumanoidMobPatch<?> self = (CustomHumanoidMobPatch<?>) (Object) this;
+        // CNPC 的 isKilled 也代表死亡；不能让下方僵直修复把尸体 motion 改为 INACTION。
+        if (self.getOriginal() instanceof EntityNPCInterface npc && NpcDeathRecovery.dead(npc)) {
+            self.currentLivingMotion = LivingMotions.DEATH;
+            self.currentCompositeMotion = LivingMotions.DEATH;
+            return;
+        }
         if (!self.getEntityState().updateLivingMotion() && considerInaction) {
             self.currentLivingMotion = LivingMotions.INACTION;
             self.currentCompositeMotion = LivingMotions.INACTION;

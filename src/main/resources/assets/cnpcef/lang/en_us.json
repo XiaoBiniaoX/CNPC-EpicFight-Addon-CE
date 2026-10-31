@@ -3,7 +3,7 @@
   "cnpcef.button.select_config": "Select Config",
   "cnpcef.gui.select_title": "Select EF Config",
   "cnpcef.gui.battle_desire": "Battle Desire",
-  "cnpcef.gui.battle_desire.tooltip": "Range: 0–10; default: 5. Higher values shorten melee waiting and speed up EF attacks. 0 is slow, not disabled. Does not change damage or add skill slots.",
+  "cnpcef.gui.battle_desire.tooltip": "Range: 0–10; default: 5. Higher values shorten melee waiting and speed up EF attacks. 0 gives ordinary CNPC melee an extremely long wait (about 2.1 billion ticks), while EF attack animations remain at half speed; it is not a universal attack disable. Does not change damage or add skill slots.",
   "cnpcef.gui.anim_speed": "Anim Speed",
   "cnpcef.gui.anim_speed.tooltip": "Range: 0.01–10; default: 1. Multiplies EF melee attack animation speed and collision timing. 2 is twice as fast; 0.5 is half speed. Does not change damage or ranged attacks.",
   "cnpcef.configuration.damage": "NPC Melee Damage",

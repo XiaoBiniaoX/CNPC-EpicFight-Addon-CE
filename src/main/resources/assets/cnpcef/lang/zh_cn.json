@@ -3,7 +3,7 @@
   "cnpcef.button.select_config": "选择 EF 配置",
   "cnpcef.gui.select_title": "选择史诗战斗配置",
   "cnpcef.gui.battle_desire": "战斗欲望",
-  "cnpcef.gui.battle_desire.tooltip": "范围：0～10，默认：5。数值越高，近战等待越短，EF 攻击越快。0 表示低欲望，不是禁用攻击。不改变伤害，不增加技能执行槽。",
+  "cnpcef.gui.battle_desire.tooltip": "范围：0～10，默认：5。数值越高，近战等待越短，EF 攻击越快。0 使普通 CNPC 近战进入极长等待（约21亿 tick），EF 攻击动画仍为半速，不是统一禁用攻击。不改变伤害，不增加技能执行槽。",
   "cnpcef.gui.anim_speed": "动画攻速",
   "cnpcef.gui.anim_speed.tooltip": "范围：0.01～10，默认：1。按倍率缩放 EF 近战攻击动画及碰撞时机；2 为两倍速，0.5 为半速。不改变伤害或弹射物攻击。",
   "cnpcef.configuration.damage": "NPC 近战伤害",

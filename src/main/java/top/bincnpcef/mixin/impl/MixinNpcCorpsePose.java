@@ -20,7 +20,7 @@ public class MixinNpcCorpsePose {
         cnpcef$corpsePose.beforeTick(npc);
     }
 
-    @Inject(method = "tick", at = @At("TAIL"))
+    @Inject(method = "tick", at = @At("RETURN"))
     private void cnpcef$afterTick(CallbackInfo ci) {
         if (cnpcef$corpsePose != null) cnpcef$corpsePose.afterTick((EntityNPCInterface) (Object) this);
     }

@@ -34,7 +34,8 @@ public final class NpcDeathRecovery {
                 || npc.currentAnimation == 14 || !(npc.getHealth() > 0.0F)) return;
         revive |= patch.currentLivingMotion == LivingMotions.DEATH || patch.currentCompositeMotion == LivingMotions.DEATH;
         if (!revive) return;
-        var death = animator.getLivingAnimation(LivingMotions.DEATH, null);
+        // EF playDeathAnimation 在数据包未定义 DEATH 时使用 BIPED_DEATH。
+        var death = animator.getLivingAnimation(LivingMotions.DEATH, Animations.BIPED_DEATH);
         IServerAnimatorQueue queue = (IServerAnimatorQueue) animator;
         var next = queue.cnpcef$getNextAnimation();
         boolean queuedDeath = isDeath(next, death, null);

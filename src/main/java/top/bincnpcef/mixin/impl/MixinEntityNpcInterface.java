@@ -67,7 +67,7 @@ public abstract class MixinEntityNpcInterface {
         }
     }
 
-    @Inject(method = "tick", at = @At("TAIL"))
+    @Inject(method = "tick", at = @At("RETURN"))
     private void cnpcef$afterTick(CallbackInfo ci) {
         if (cnpcef$deathRecovery != null) cnpcef$deathRecovery.afterTick((EntityNPCInterface) (Object) this);
     }
