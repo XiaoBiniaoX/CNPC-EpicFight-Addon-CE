@@ -11,6 +11,7 @@
     "impl.MixinAttackAnimationSpeed",
     "impl.MixinEntityAIAttackTarget",
     "impl.MixinCombatBehaviorsDesire",
+    "impl.MixinCombatBehaviorMeleeRange",
     "impl.MixinEpicFightDamageSource",
     "impl.MixinNpcBaseDamage",
     "impl.MixinNpcPatchRouting",
@@ -27,6 +28,9 @@
     "impl.ICustomHumanoidMobPatchProvider"
   ],
   "client": [
+    "impl.MixinWearableItemLayer",
+    "impl.IRenderCustomNpc",
+    "impl.MixinPatchedLivingEntityRenderer",
     "impl.MixinGuiNpcStats",
     "impl.MixinNpcCorpsePose",
     "impl.IClientAnimatorMotions",
