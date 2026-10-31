@@ -1,7 +1,7 @@
 package com.goodbird.cnpcefaddon.client.ysm;
 
-import com.ysmef.compat.model.YSMMeshLibrary;
 import com.ysmef.compat.renderer.YSMMeshSelector;
+import com.ysmef.compat.ysm.YsmModelPackage;
 import net.minecraft.world.entity.LivingEntity;
 import yesman.epicfight.api.asset.AssetAccessor;
 import yesman.epicfight.client.mesh.HumanoidMesh;
@@ -32,6 +32,6 @@ public final class YsmefNpcBridge {
 
     /** The locally available YSM model ids from the YSM base-mod library. */
     public static List<String> availableModelIds() {
-        return new ArrayList<>(YSMMeshLibrary.availableModelIds());
+        return new ArrayList<>(YsmModelPackage.scanAvailableModels().keySet());
     }
 }
