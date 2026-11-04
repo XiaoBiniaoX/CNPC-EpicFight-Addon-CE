@@ -7,5 +7,6 @@
   "cnpcefaddon.gui.ysmConfig": "Модель YSM",
   "cnpcefaddon.gui.selectYsm": "Выбрать YSM",
   "cnpcefaddon.gui.selectingYsm": "Выбор модели YSM:",
+  "cnpcefaddon.config.guardNpcProjectile": "Блокировать снаряды NPC",
   "guihint.npcmeleeaggro": "Насколько агрессивно NPC стремится к ближнему бою. Чем больше значение, тем чаще атаки. Оставьте 5.0 для стандартного поведения."
 }

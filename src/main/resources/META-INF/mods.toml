@@ -63,6 +63,15 @@ A compatibility bridge between CustomNPCs and EpicFight
     versionRange="[1.20.1,)"
     ordering="AFTER"
     side="BOTH"
+# Hard dependency: CNPCplus. Its NPC ranged buffs and projectile helpers are the baseline
+# this addon's ranged/NPC behaviour is tuned against; 4.0.5 is the first build with the
+# current ranged data layout. No upper bound is declared on purpose.
+[[dependencies.cnpcefaddon]]
+    modId="cnpcplus"
+    mandatory=true
+    versionRange="[4.0.5,)"
+    ordering="AFTER"
+    side="BOTH"
 # Optional ordering hint: when EpicFight-Extra is installed, load this addon AFTER it so
 # our bundled vanilla biped armature resources override its modified ones. Not a hard
 # dependency: the mod works fine without epicfightx.

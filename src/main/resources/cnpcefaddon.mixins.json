@@ -31,6 +31,8 @@
     "MixinEntityAIAttackTarget",
     "MixinDataMelee",
     "MixinGuardGoal",
+    "MixinGuardSkillProjectile",
+    "MixinImpactGuardSkillProjectile",
     "MixinLivingEntityHurt",
     "MixinLinkAnimation",
     "MixinLivingEntityPatchDamage",

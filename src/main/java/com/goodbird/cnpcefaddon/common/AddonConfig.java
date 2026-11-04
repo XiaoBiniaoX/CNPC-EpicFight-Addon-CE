@@ -17,6 +17,8 @@ public class AddonConfig {
     public static final ForgeConfigSpec.BooleanValue SUPPRESS_EPICFIGHT_LOG;
     public static final ForgeConfigSpec.BooleanValue SUPPRESS_INDESTRUCTIBLE_LOG;
 
+    public static final ForgeConfigSpec.BooleanValue GUARD_NPC_PROJECTILE;
+
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
@@ -116,6 +118,28 @@ public class AddonConfig {
                 "Only this WARN pattern is filtered; other logs and every ERROR are kept."
         );
         SUPPRESS_INDESTRUCTIBLE_LOG = builder.define("suppressIndestructibleUnrecognizedWarn", true);
+
+        builder.pop();
+
+        builder.push("guard");
+
+        builder.comment(
+                "允许史诗战斗的格挡技能挡住由 NPC 丢出的投掷物与 NPC 射出的原版箭矢。",
+                "史诗战斗原本把全部投射物都视为不可格挡，这里只对 CNPC 发射的投射物放行；",
+                "其他模组与普通生物（骷髅、烈焰人等）的投射物保持原样，仍然不可格挡。",
+                "改动立即生效，不需要重启游戏。",
+                "Allows Epic Fight's guard skills to block projectiles thrown or shot by Custom NPCs.",
+                "Epic Fight treats every projectile as unblockable; this option only relaxes that for",
+                "projectiles whose owner is a CNPC. Projectiles from other mods and vanilla mobs",
+                "(skeletons, blazes, ...) stay unblockable. Takes effect immediately, no restart needed."
+        );
+        GUARD_NPC_PROJECTILE = builder
+                .comment(
+                        "默认开启。关闭后回到史诗战斗的原版判定。",
+                        "Enabled by default. Disable to restore Epic Fight's stock behaviour."
+                )
+                .translation("cnpcefaddon.config.guardNpcProjectile")
+                .define("guardNpcProjectile", true);
 
         builder.pop();
 
